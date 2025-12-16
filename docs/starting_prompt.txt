@@ -1,0 +1,166 @@
+Role: You are a Senior TypeScript Developer and an Expert in n8n Node Development. Goal: Create a complete, production-ready n8n Community Node package for xPay. Architecture: This is a Trigger-style node. It acts as a Webhook that only fires when a crypto payment is confirmed via the xPay API.
+
+📋 Phase 1: Project Scaffolding
+Instruction: Initialize the project structure based on n8n-nodes-starter.
+
+Generate package.json:
+
+Name: n8n-nodes-xpay
+
+Version: 0.1.0
+
+Description: "Accept crypto payments in n8n. Create pay-to-run workflows on Base & Solana."
+
+CRITICAL KEYWORD: Add n8n-community-node-package to the keywords array (Required for auto-discovery).
+
+License: MIT
+
+Author: "{xpay✦} Team xpaysh@gmail.com"
+
+Generate tsconfig.json:
+
+Standard n8n node config (Target es2019).
+
+🔐 Phase 2: Credentials (XPayApi.credentials.ts)
+Instruction: Create the credential file.
+
+File: nodes/XPayApi/XPayApi.credentials.ts
+
+Class: XPayApi
+
+Properties:
+
+apiKey: Type string (Password). Label: "xPay API Secret".
+
+environment: Type options (Production, Sandbox). Default: Sandbox.
+
+Docs Link: Point to https://app.xpay.sh/settings/api-keys.
+
+⚡ Phase 3: The Trigger Node (XPayTrigger.node.ts)
+Instruction: Create the main logic.
+
+File: nodes/XPayTrigger/XPayTrigger.node.ts
+
+Class: XPayTrigger implements INodeType
+
+Metadata:
+
+displayName: "xPay Payment Trigger"
+
+name: "xPayTrigger"
+
+icon: file:xpay.svg
+
+group: ['trigger']
+
+description: "Starts the workflow only after a crypto payment is received."
+
+Node Properties (UI Inputs):
+
+Product Details:
+
+productName (string): Title displayed on the payment page.
+
+description (string, textarea): Brief details.
+
+Pricing:
+
+amount (number): e.g., 1.50.
+
+currency (options): USDC (Default), ETH, SOL.
+
+network (options): Base, Solana.
+
+Customer Inputs (Fixed Collection):
+
+Allow the builder to define form fields the user must fill before paying.
+
+Field Name (e.g., "email"), Field Type (Text, Email, Number).
+
+Configuration:
+
+redirectUrl (string): Where to send the user after success.
+
+testMode (boolean): "Simulate payments without blockchain?"
+
+Webhook Logic (webhookMethods):
+
+Registration: On workflow activation, send POST to https://api.xpay.sh/v1/webhooks/register.
+
+Payload:
+
+JSON
+
+{
+  "callback_url": "$WEBHOOK_URL",
+  "config": {
+    "price": $amount,
+    "currency": $currency,
+    "fields": $fields,
+    "test_mode": $testMode
+  }
+}
+Note: The API response from registration will contain the public paymentUrl (e.g., https://pay.xpay.sh/p/123). Log this to the console so the user can see it.
+
+Execution Logic (webhook):
+
+Validation: Check for X-xPay-Signature header.
+
+Output: Return the JSON body from the webhook (contains Payment Info + User Inputs).
+
+📄 Phase 4: Documentation (README.md)
+Instruction: Write the copy for the n8n community page.
+
+Header: "Monetize your AI Agents & Workflows with xPay."
+
+Quick Start:
+
+Install node.
+
+Get API Key from app.xpay.sh.
+
+Set Price (e.g., 5 USDC).
+
+Share the generated pay.xpay.sh link.
+
+Features: "Base & Solana support", "Sandbox Mode", "Zero-config hosted forms".
+
+🚀 Phase 5: Build Scripts
+Instruction: Provide commands to:
+
+npm run build
+
+npm link (for local testing).
+
+npm publish --access public (for release).
+
+2. Why the /p/ Route? (The "Namespace" Logic)
+You absolutely need a namespace like /p/ (short for pay or product) or /c/ (checkout) to prevent Routing Collisions.
+
+The Technical Conflict (Next.js App Router): If you use the root path pay.xpay.sh/[nodeId], the [nodeId] is a dynamic segment that catches everything. This makes it impossible to host system pages later without conflicts.
+
+Scenario: You want to add a "Login" page (pay.xpay.sh/login) or a "Success" page (pay.xpay.sh/success).
+
+The Bug: If a malicious user names their product "login" or "success" (or if a UUID happens to collide), your router won't know if it should render the System Login Page or the User's Product Page.
+
+The Fix: By namespacing user content under /p/, you strictly separate:
+
+pay.xpay.sh/login (System Route)
+
+pay.xpay.sh/p/login (User Product Route)
+
+This is a branding UX decision for the end-user, not the developer.
+
+Winner: start.xpay.sh
+
+1. Why start.xpay.sh wins
+Action-Oriented: The link is a "Call to Action" for the end-user. They are paying to start a workflow (receive a report, get an audit, etc.).
+
+Hides the Machinery: "Node" is developer jargon. Your grandma doesn't want to "visit a node"; she wants to "start the process."
+
+Universal: It works for n8n, Flowise, or a Python script. It implies initialization.
+
+2. Why node.xpay.sh fails
+Leaks Abstraction: It tells the customer "This is built with backend nodes," which is irrelevant noise.
+
+Passive: "Node" is a noun. "Start" is a verb. Verbs convert better in checkout flows.

@@ -1,0 +1,63 @@
+import type {
+	IAuthenticateGeneric,
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+} from 'n8n-workflow';
+
+export class XPayApi implements ICredentialType {
+	name = 'xPayApi';
+	displayName = 'xPay API';
+	documentationUrl = 'https://docs.xpay.sh/integrations/n8n';
+
+	properties: INodeProperties[] = [
+		{
+			displayName: 'API Secret',
+			name: 'apiKey',
+			type: 'string',
+			typeOptions: {
+				password: true,
+			},
+			default: '',
+			required: true,
+			description: 'Your xPay API secret key',
+			hint: 'Get your keys at app.xpay.sh/settings/api-keys',
+		},
+		{
+			displayName: 'Environment',
+			name: 'environment',
+			type: 'options',
+			options: [
+				{
+					name: 'Sandbox',
+					value: 'sandbox',
+					description: 'Test mode - no real payments',
+				},
+				{
+					name: 'Production',
+					value: 'production',
+					description: 'Live mode - real crypto payments',
+				},
+			],
+			default: 'sandbox',
+			description: 'Choose Sandbox for testing, Production for live payments',
+		},
+	];
+
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: {
+				Authorization: '=Bearer {{$credentials.apiKey}}',
+			},
+		},
+	};
+
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: '={{$credentials.environment === "production" ? "https://api.xpay.sh" : "https://api.xpay.sh"}}',
+			url: '/v1/health',
+			method: 'GET',
+		},
+	};
+}

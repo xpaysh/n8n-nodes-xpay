@@ -1,0 +1,59 @@
+{
+  "name": "n8n-nodes-xpay",
+  "version": "0.1.0",
+  "description": "Accept crypto payments in n8n. Create pay-to-run workflows on Base.",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "crypto",
+    "payments",
+    "usdc",
+    "base",
+    "web3",
+    "paywall",
+    "monetization"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "xPay Team",
+    "email": "xpaysh@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xpay-sh/n8n-nodes-xpay.git"
+  },
+  "homepage": "https://xpay.sh",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "n8n-node build",
+    "build:watch": "n8n-node build --watch",
+    "dev": "n8n-node dev",
+    "lint": "eslint nodes credentials --ext .ts",
+    "lint:fix": "eslint nodes credentials --ext .ts --fix",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/XPayApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/XPayTrigger/XPayTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "n8n-workflow": "^1.70.0",
+    "typescript": "^5.7.0",
+    "@n8n/n8n-node-cli": "^1.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": ">=1.70.0"
+  }
+}
