@@ -6,8 +6,8 @@ import type {
 	INodeTypeDescription,
 	IWebhookResponseData,
 	IHttpRequestOptions,
+	NodeConnectionType,
 } from 'n8n-workflow';
-import { NodeConnectionType } from 'n8n-workflow';
 import * as crypto from 'crypto';
 
 export class XPayTrigger implements INodeType {
@@ -23,7 +23,7 @@ export class XPayTrigger implements INodeType {
 			name: 'xPay Payment Trigger',
 		},
 		inputs: [],
-		outputs: [NodeConnectionType.Main],
+		outputs: ['main' as NodeConnectionType],
 		credentials: [
 			{
 				name: 'xPayApi',

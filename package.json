@@ -25,9 +25,8 @@
   "homepage": "https://xpay.sh",
   "main": "dist/index.js",
   "scripts": {
-    "build": "n8n-node build",
-    "build:watch": "n8n-node build --watch",
-    "dev": "n8n-node dev",
+    "build": "tsc && npm run copy-icons",
+    "copy-icons": "cp nodes/XPayTrigger/xpay.svg dist/nodes/XPayTrigger/",
     "lint": "eslint nodes credentials --ext .ts",
     "lint:fix": "eslint nodes credentials --ext .ts --fix",
     "prepublishOnly": "npm run build"
@@ -50,8 +49,7 @@
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
     "n8n-workflow": "^1.70.0",
-    "typescript": "^5.7.0",
-    "@n8n/n8n-node-cli": "^1.0.0"
+    "typescript": "^5.7.0"
   },
   "peerDependencies": {
     "n8n-workflow": ">=1.70.0"
