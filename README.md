@@ -56,7 +56,7 @@ npm install n8n-nodes-xpay
    - **Customer Fields**: Add "email" and "website" fields
 4. Connect your other nodes (e.g., HTTP Request, Send Email)
 5. **Activate** the workflow
-6. Check the logs for your checkout URL: `https://start.xpay.sh/p/...`
+6. Check the logs for your checkout URL: `https://run.xpay.sh/p/...`
 
 ### 4. Test in Sandbox Mode
 
