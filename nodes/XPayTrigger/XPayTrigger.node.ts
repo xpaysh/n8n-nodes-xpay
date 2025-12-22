@@ -12,18 +12,18 @@ import * as crypto from 'crypto';
 
 export class XPayTrigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'xPay Payment Trigger',
+		displayName: 'xpay✦ pay-to-run trigger',
 		name: 'xPayTrigger',
 		icon: 'file:xpay.svg',
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["productName"]}}',
-		description: 'Starts the workflow when a customer makes a crypto payment via your checkout link',
+		description: 'Starts the workflow when a customer pays via your hosted beautiful Pay to Run form',
 		defaults: {
-			name: 'xPay Payment Trigger',
+			name: 'xpay✦ pay-to-run trigger',
 		},
 		// Show activation message with checkout URL
-		activationMessage: 'xPay checkout is active! Your checkout URL is ready - check the Output panel.',
+		activationMessage: 'xpay✦ is active! Your Pay to Run form URL is ready - check the Output panel.',
 		inputs: [],
 		outputs: ['main' as NodeConnectionType],
 		credentials: [
@@ -49,23 +49,20 @@ export class XPayTrigger implements INodeType {
 		],
 		// Custom trigger panel text
 		triggerPanel: {
-			header: 'xPay Payment Trigger',
+			header: 'xpay✦ pay-to-run trigger',
 			executionsHelp: {
-				inactive: 'Activate the workflow to generate your checkout link. Check server logs for the URL.',
-				active: 'Workflow is active! Check server logs for your checkout URL, then share it with customers.',
+				inactive: 'Activate the workflow to generate your Pay to Run form URL. POST an empty body to the webhook URL to get it.',
+				active: 'Workflow is active! POST an empty body to the webhook URL shown above to get your Pay to Run form URL.',
 			},
-			activationHint: 'Activate the workflow (not just test) to keep your checkout URL active.',
+			activationHint: 'Activate the workflow (not just test) to keep your Pay to Run form URL active.',
 		},
 		properties: [
-			// Instructions notice - simplified
+			// Instructions notice with actual content
 			{
-				displayName: 'How to Get Your Checkout Link',
+				displayName: 'After activating, POST an empty body {} to the webhook URL above. You will receive your Pay to Run form URL in the response.',
 				name: 'notice',
 				type: 'notice',
 				default: '',
-				typeOptions: {
-					noticeTheme: 'info',
-				},
 			},
 			// Product Details Section
 			{
@@ -295,11 +292,11 @@ export class XPayTrigger implements INodeType {
 
 					// Log the checkout URL for the builder to copy
 					console.log('\n========================================');
-					console.log('xPay Payment Link Generated!');
+					console.log('xpay✦ Pay to Run Form Generated!');
 					console.log('========================================');
 					console.log(`Product: ${productName}`);
 					console.log(`Price: $${amount} USDC`);
-					console.log(`Checkout URL: ${response.checkout_url}`);
+					console.log(`Form URL: ${response.checkout_url}`);
 					console.log('========================================');
 					console.log('Share this link with your customers to start the workflow.\n');
 
@@ -368,7 +365,7 @@ export class XPayTrigger implements INodeType {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>xPay Checkout Ready</title>
+    <title>xpay✦ Pay to Run Form Ready</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
         .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -382,20 +379,20 @@ export class XPayTrigger implements INodeType {
 </head>
 <body>
     <div class="card">
-        <h1>✅ xPay Checkout Ready!</h1>
+        <h1>✅ xpay✦ Pay to Run Form Ready!</h1>
         <p><strong>Product:</strong> ${productName}</p>
         <p><strong>Price:</strong> $${amount} USDC</p>
 
-        <h3>Your Checkout URL:</h3>
-        <div class="url-box" id="checkoutUrl">${checkoutUrl || 'Checkout URL not available yet'}</div>
+        <h3>Your Pay to Run Form URL:</h3>
+        <div class="url-box" id="checkoutUrl">${checkoutUrl || 'URL not available yet'}</div>
         <button class="copy-btn" onclick="navigator.clipboard.writeText('${checkoutUrl}'); this.textContent='Copied!'">📋 Copy URL</button>
 
-        ${checkoutUrl ? `<p><a href="${checkoutUrl}" target="_blank" class="test-btn">🚀 Open Checkout Page</a></p>` : ''}
+        ${checkoutUrl ? `<p><a href="${checkoutUrl}" target="_blank" class="test-btn">🚀 Open Pay to Run Form</a></p>` : ''}
 
         <div class="info">
             <p><strong>Next Steps:</strong></p>
             <ol>
-                <li>Copy the checkout URL above</li>
+                <li>Copy the form URL above</li>
                 <li>Share it with your customers</li>
                 <li>When they pay, your n8n workflow will trigger!</li>
             </ol>
@@ -426,13 +423,13 @@ export class XPayTrigger implements INodeType {
 				webhookResponse: {
 					status: 200,
 					body: {
-						message: 'xPay Payment Trigger is listening!',
-						checkout_url: checkoutUrl,
+						message: 'xpay✦ pay-to-run trigger is listening!',
+						form_url: checkoutUrl,
 						checkout_id: webhookData.checkoutId,
 						test_mode: testMode,
 						instructions: testMode
 							? 'Test mode is ON. Send a POST with {"payment": {"amount": 1}, "input": {"email": "test@example.com"}} to simulate a payment.'
-							: 'Share the checkout_url with customers. When they pay, this webhook will receive the payment data.',
+							: 'Share the form_url with customers. When they pay, this webhook will receive the payment data.',
 					},
 				},
 			};

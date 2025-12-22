@@ -7,7 +7,7 @@ import type {
 
 export class XPayApi implements ICredentialType {
 	name = 'xPayApi';
-	displayName = 'xPay API';
+	displayName = 'xpay✦ API';
 	documentationUrl = 'https://docs.xpay.sh/integrations/n8n';
 
 	properties: INodeProperties[] = [
@@ -20,7 +20,7 @@ export class XPayApi implements ICredentialType {
 			},
 			default: '',
 			required: true,
-			description: 'Your xPay API secret key',
+			description: 'Your xpay✦ API secret key',
 			hint: 'Get your keys at app.xpay.sh/settings/api-keys',
 		},
 		{
@@ -36,7 +36,7 @@ export class XPayApi implements ICredentialType {
 				{
 					name: 'Production',
 					value: 'production',
-					description: 'Live mode - real crypto payments',
+					description: 'Live mode - real payments',
 				},
 			],
 			default: 'sandbox',
