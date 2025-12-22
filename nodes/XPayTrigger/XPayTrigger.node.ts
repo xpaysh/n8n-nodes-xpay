@@ -208,6 +208,25 @@ export class XPayTrigger implements INodeType {
 				default: true,
 				description: 'Whether to enable sandbox mode (no real payments required)',
 			},
+
+			// Advanced Options
+			{
+				displayName: 'Options',
+				name: 'options',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				options: [
+					{
+						displayName: 'Webhook URL Override',
+						name: 'webhookUrlOverride',
+						type: 'string',
+						default: '',
+						placeholder: 'https://your-n8n-domain.com/webhook/...',
+						description: 'Override the webhook callback URL. Use this if your n8n is behind a reverse proxy and the auto-detected URL includes an internal port.',
+					},
+				],
+			},
 		],
 	};
 
@@ -219,8 +238,31 @@ export class XPayTrigger implements INodeType {
 			},
 
 			async create(this: IHookFunctions): Promise<boolean> {
-				const webhookUrl = this.getNodeWebhookUrl('default');
+				let webhookUrl = this.getNodeWebhookUrl('default') as string;
 				const credentials = await this.getCredentials('xPayApi');
+
+				// Auto-fix: Strip internal n8n ports for reverse proxy setups
+				// Common n8n ports: 5678 (default), 5679, etc.
+				// If behind a reverse proxy, external URL shouldn't include internal port
+				if (webhookUrl) {
+					try {
+						const urlObj = new URL(webhookUrl);
+						const internalPorts = ['5678', '5679', '5680'];
+						if (internalPorts.includes(urlObj.port)) {
+							urlObj.port = '';
+							webhookUrl = urlObj.toString();
+							console.log(`xpay✦: Auto-fixed webhook URL (removed internal port): ${webhookUrl}`);
+						}
+					} catch {
+						// URL parsing failed, use as-is
+					}
+				}
+
+				// Check for webhook URL override (manual override if auto-fix doesn't work)
+				const options = this.getNodeParameter('options', {}) as IDataObject;
+				if (options.webhookUrlOverride && typeof options.webhookUrlOverride === 'string' && options.webhookUrlOverride.trim() !== '') {
+					webhookUrl = options.webhookUrlOverride.trim();
+				}
 
 				// Get node parameters
 				const productName = this.getNodeParameter('productName') as string;
