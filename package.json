@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-xpay",
+  "name": "@xpaysh/n8n-nodes-xpay",
   "version": "0.1.0",
   "description": "Monetize your n8n workflows with xpay✦ payments. Create pay-to-run workflows in 60 seconds.",
   "keywords": [

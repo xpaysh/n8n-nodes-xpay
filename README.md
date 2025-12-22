@@ -19,13 +19,13 @@ Turn any n8n workflow into a paid service in 60 seconds. Accept USDC payments on
 
 1. Go to **Settings > Community Nodes**
 2. Click **Install a community node**
-3. Enter `n8n-nodes-xpay`
+3. Enter `@xpaysh/n8n-nodes-xpay`
 4. Click **Install**
 
 ### Manual Installation
 
 ```bash
-npm install n8n-nodes-xpay
+npm install @xpaysh/n8n-nodes-xpay
 ```
 
 ## Quick Start
