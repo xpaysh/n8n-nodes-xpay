@@ -1,21 +1,21 @@
 {
   "name": "n8n-nodes-xpay",
   "version": "0.1.0",
-  "description": "Accept crypto payments in n8n. Create pay-to-run workflows on Base.",
+  "description": "Monetize your n8n workflows with xpay✦ payments. Create pay-to-run workflows in 60 seconds.",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
-    "crypto",
     "payments",
     "usdc",
     "base",
-    "web3",
     "paywall",
-    "monetization"
+    "monetization",
+    "pay-to-run",
+    "xpay"
   ],
   "license": "MIT",
   "author": {
-    "name": "xPay Team",
+    "name": "xpay✦ Team",
     "email": "xpaysh@gmail.com"
   },
   "repository": {
