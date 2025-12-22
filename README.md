@@ -58,12 +58,39 @@ npm install n8n-nodes-xpay
 5. **Activate** the workflow
 6. Check the logs for your checkout URL: `https://run.xpay.sh/p/...`
 
-### 4. Test in Sandbox Mode
+### 4. Get Your Checkout URL
+
+There are two ways to find your checkout URL:
+
+**Option A: POST to Webhook URL (Recommended)**
+1. Copy the webhook URL shown in the n8n trigger panel
+2. Send an empty POST request: `curl -X POST <webhook-url>`
+3. You'll get back your checkout URL and instructions:
+```json
+{
+  "message": "xPay Payment Trigger is listening!",
+  "checkout_url": "https://run.xpay.sh/p/chk_abc123",
+  "test_mode": true,
+  "instructions": "Test mode is ON. Send a POST with {\"payment\": ...} to simulate."
+}
+```
+
+**Option B: Check Server Logs**
+1. Activate the workflow
+2. Check your n8n server logs for: `Checkout URL: https://run.xpay.sh/p/...`
+
+### 5. Test in Sandbox Mode
 
 With **Test Mode** enabled:
 - No real payments required
+- No signature verification on webhooks (easier testing)
 - Click "Simulate Payment" on the checkout page
-- Workflow triggers immediately for testing
+- Or POST test data directly to your webhook:
+```bash
+curl -X POST <webhook-url> \
+  -H "Content-Type: application/json" \
+  -d '{"payment":{"amount":5},"input":{"email":"test@test.com"}}'
+```
 
 ## Node Properties
 

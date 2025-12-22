@@ -18,10 +18,12 @@ export class XPayTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["productName"]}}',
-		description: 'Starts the workflow only after a crypto payment is received',
+		description: 'Starts the workflow when a customer makes a crypto payment via your checkout link',
 		defaults: {
 			name: 'xPay Payment Trigger',
 		},
+		// Show activation message with checkout URL
+		activationMessage: 'xPay checkout is active! Your checkout URL is ready - check the Output panel.',
 		inputs: [],
 		outputs: ['main' as NodeConnectionType],
 		credentials: [
@@ -37,8 +39,34 @@ export class XPayTrigger implements INodeType {
 				responseMode: 'onReceived',
 				path: 'webhook',
 			},
+			{
+				name: 'setup',
+				httpMethod: 'GET',
+				responseMode: 'onReceived',
+				path: 'webhook',
+				restartWebhook: true,
+			},
 		],
+		// Custom trigger panel text
+		triggerPanel: {
+			header: 'xPay Payment Trigger',
+			executionsHelp: {
+				inactive: 'Activate the workflow to generate your checkout link. Check server logs for the URL.',
+				active: 'Workflow is active! Check server logs for your checkout URL, then share it with customers.',
+			},
+			activationHint: 'Activate the workflow (not just test) to keep your checkout URL active.',
+		},
 		properties: [
+			// Instructions notice - simplified
+			{
+				displayName: 'How to Get Your Checkout Link',
+				name: 'notice',
+				type: 'notice',
+				default: '',
+				typeOptions: {
+					noticeTheme: 'info',
+				},
+			},
 			// Product Details Section
 			{
 				displayName: 'Product Name',
@@ -101,8 +129,12 @@ export class XPayTrigger implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				placeholder: '0x...',
-				description: 'Your wallet address to receive USDC payments',
+				placeholder: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00',
+				description: 'Your Ethereum wallet address (42 characters, starting with 0x)',
+				validateType: 'string',
+				typeOptions: {
+					validationMessage: 'Must be a valid Ethereum address (42 characters starting with 0x)',
+				},
 			},
 
 			// Customer Input Fields
@@ -195,10 +227,15 @@ export class XPayTrigger implements INodeType {
 
 				// Get node parameters
 				const productName = this.getNodeParameter('productName') as string;
+				const recipientWallet = this.getNodeParameter('recipientWallet') as string;
+
+				// Validate wallet address format
+				if (!recipientWallet || !/^0x[a-fA-F0-9]{40}$/.test(recipientWallet)) {
+					throw new Error('Invalid wallet address. Must be 42 characters starting with 0x (e.g., 0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00)');
+				}
 				const description = this.getNodeParameter('description', '') as string;
 				const amount = this.getNodeParameter('amount') as number;
 				const network = this.getNodeParameter('network') as string;
-				const recipientWallet = this.getNodeParameter('recipientWallet') as string;
 				const fieldsData = this.getNodeParameter('fields') as IDataObject;
 				const redirectUrl = this.getNodeParameter('redirectUrl', '') as string;
 				const testMode = this.getNodeParameter('testMode') as boolean;
@@ -212,10 +249,11 @@ export class XPayTrigger implements INodeType {
 				}));
 
 				// Determine API base URL
+				// TODO: Update to api.xpay.sh once DNS is configured
 				const apiBaseUrl =
 					credentials.environment === 'production'
-						? 'https://api.xpay.sh'
-						: 'https://api.xpay.sh';
+						? 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev'
+						: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev';
 
 				// Register webhook with xPay API
 				const requestOptions: IHttpRequestOptions = {
@@ -288,10 +326,11 @@ export class XPayTrigger implements INodeType {
 				}
 
 				const credentials = await this.getCredentials('xPayApi');
+				// TODO: Update to api.xpay.sh once DNS is configured
 				const apiBaseUrl =
 					credentials.environment === 'production'
-						? 'https://api.xpay.sh'
-						: 'https://api.xpay.sh';
+						? 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev'
+						: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev';
 
 				try {
 					await this.helpers.httpRequestWithAuthentication.call(this, 'xPayApi', {
@@ -315,16 +354,94 @@ export class XPayTrigger implements INodeType {
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
+		const webhookName = this.getWebhookName();
 		const req = this.getRequestObject();
+		const webhookData = this.getWorkflowStaticData('node');
+
+		// Handle GET request - show checkout URL info page
+		if (webhookName === 'setup' || req.method === 'GET') {
+			const checkoutUrl = webhookData.checkoutUrl as string;
+			const productName = this.getNodeParameter('productName') as string;
+			const amount = this.getNodeParameter('amount') as number;
+
+			const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>xPay Checkout Ready</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
+        .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #10b981; margin-top: 0; }
+        .url-box { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0; word-break: break-all; }
+        .copy-btn { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .copy-btn:hover { background: #059669; }
+        .info { color: #666; margin-top: 20px; }
+        .test-btn { display: inline-block; background: #3b82f6; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>✅ xPay Checkout Ready!</h1>
+        <p><strong>Product:</strong> ${productName}</p>
+        <p><strong>Price:</strong> $${amount} USDC</p>
+
+        <h3>Your Checkout URL:</h3>
+        <div class="url-box" id="checkoutUrl">${checkoutUrl || 'Checkout URL not available yet'}</div>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('${checkoutUrl}'); this.textContent='Copied!'">📋 Copy URL</button>
+
+        ${checkoutUrl ? `<p><a href="${checkoutUrl}" target="_blank" class="test-btn">🚀 Open Checkout Page</a></p>` : ''}
+
+        <div class="info">
+            <p><strong>Next Steps:</strong></p>
+            <ol>
+                <li>Copy the checkout URL above</li>
+                <li>Share it with your customers</li>
+                <li>When they pay, your n8n workflow will trigger!</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>`;
+
+			return {
+				webhookResponse: {
+					status: 200,
+					headers: { 'Content-Type': 'text/html' },
+					body: html,
+				},
+			};
+		}
+
+		// Handle POST request - actual payment webhook
 		const body = this.getBodyData() as IDataObject;
 		const headers = this.getHeaderData() as IDataObject;
-
-		// Get stored webhook secret
-		const webhookData = this.getWorkflowStaticData('node');
 		const webhookSecret = webhookData.webhookSecret as string;
+		const testMode = this.getNodeParameter('testMode', true) as boolean;
+		const checkoutUrl = webhookData.checkoutUrl as string;
 
-		// Verify signature (skip for local testing)
-		if (webhookSecret && webhookSecret !== 'test-secret') {
+		// If empty body or _getInfo flag, return helpful info
+		if (!body || Object.keys(body).length === 0 || body._getInfo) {
+			return {
+				webhookResponse: {
+					status: 200,
+					body: {
+						message: 'xPay Payment Trigger is listening!',
+						checkout_url: checkoutUrl,
+						checkout_id: webhookData.checkoutId,
+						test_mode: testMode,
+						instructions: testMode
+							? 'Test mode is ON. Send a POST with {"payment": {"amount": 1}, "input": {"email": "test@example.com"}} to simulate a payment.'
+							: 'Share the checkout_url with customers. When they pay, this webhook will receive the payment data.',
+					},
+				},
+			};
+		}
+
+		// In test mode, skip signature verification for easier testing
+		const skipSignatureVerification = testMode || webhookSecret === 'test-secret';
+
+		if (!skipSignatureVerification) {
 			const signature = headers['x-xpay-signature'] as string;
 			const timestamp = headers['x-xpay-timestamp'] as string;
 

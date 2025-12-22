@@ -55,7 +55,8 @@ export class XPayApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: '={{$credentials.environment === "production" ? "https://api.xpay.sh" : "https://api.xpay.sh"}}',
+			// TODO: Update to api.xpay.sh once DNS is configured
+			baseURL: '={{$credentials.environment === "production" ? "https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev" : "https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev"}}',
 			url: '/v1/health',
 			method: 'GET',
 		},
