@@ -1,122 +1,135 @@
 # n8n-nodes-xpay
 
-**Monetize your n8n workflows with xpay✦ payments.**
+[![npm version](https://img.shields.io/npm/v/@xpaysh/n8n-nodes-xpay.svg)](https://www.npmjs.com/package/@xpaysh/n8n-nodes-xpay)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Turn any n8n workflow into a paid service in 60 seconds. Accept USDC payments on Base - no coding required.
+This is an n8n community node that enables you to monetize your n8n workflows with USDC payments on Base. Turn any workflow into a paid service in 60 seconds using [xpay](https://xpay.sh).
 
-## How It Works
+## Overview
 
-1. Drag the **xpay✦ pay-to-run trigger** node onto your canvas
-2. Configure your product name and price
-3. Add any customer input fields you need
-4. Activate the workflow - you'll get a shareable Pay to Run form URL
-5. Share the link with customers
-6. When they pay, your workflow runs automatically
+The **xpay pay-to-run trigger** node creates a hosted payment form for your workflow. When a customer pays, your workflow runs automatically with their payment and form data.
+
+**Key Features:**
+- Accept USDC payments on Base network
+- Hosted Pay to Run form - no frontend required
+- Custom form fields for customer input
+- Non-custodial - payments go directly to your wallet
+- Sandbox mode for testing without real payments
 
 ## Installation
 
-### In n8n (Recommended)
+### n8n Cloud
 
-1. Go to **Settings > Community Nodes**
+1. Open **Settings > Community Nodes**
 2. Click **Install a community node**
 3. Enter `@xpaysh/n8n-nodes-xpay`
 4. Click **Install**
 
-### Manual Installation
+### Self-Hosted n8n
 
 ```bash
 npm install @xpaysh/n8n-nodes-xpay
 ```
 
-## Quick Start
+Or via n8n UI:
+1. Go to **Settings > Community Nodes**
+2. Click **Install a community node**
+3. Enter `@xpaysh/n8n-nodes-xpay`
+4. Click **Install**
 
-### 1. Get Your API Key
+### Development
+
+```bash
+# Clone the repository
+git clone https://github.com/xpaysh/n8n-nodes-xpay.git
+cd n8n-nodes-xpay
+
+# Install dependencies
+npm install
+
+# Build the node
+npm run build
+
+# Link to your n8n installation
+npm link
+cd ~/.n8n/custom
+npm link @xpaysh/n8n-nodes-xpay
+```
+
+## Authentication
 
 1. Sign up at [app.xpay.sh](https://app.xpay.sh)
 2. Go to **Settings > API Keys**
 3. Create a new API key
-4. Copy the secret key
+4. In n8n, go to **Credentials > Add Credential**
+5. Search for "xpay API"
+6. Paste your API key
+7. Select environment: **Sandbox** (testing) or **Production** (real payments)
 
-### 2. Add Credentials in n8n
+## Getting Started
 
-1. Go to **Credentials** in n8n
-2. Click **Add Credential**
-3. Search for "xpay✦ API"
-4. Paste your API secret
-5. Choose **Sandbox** for testing or **Production** for real payments
+### 1. Create a Paid Workflow
 
-### 3. Create Your First Paid Workflow
-
-1. Create a new workflow
-2. Add the **xpay✦ pay-to-run trigger** node
+1. Create a new workflow in n8n
+2. Add the **xpay pay-to-run trigger** node
 3. Configure:
-   - **Product Name**: "Premium SEO Audit"
-   - **Price**: 5.00 (USDC)
-   - **Recipient Wallet**: Your wallet address
-   - **Customer Fields**: Add "email" and "website" fields
-4. Connect your other nodes (e.g., HTTP Request, Send Email)
+   - **Product Name**: e.g., "Premium SEO Audit"
+   - **Price (USDC)**: e.g., 5.00
+   - **Recipient Wallet**: Your Base wallet address
+   - **Customer Fields**: Add fields like "email", "website"
+4. Connect your workflow nodes (HTTP Request, Send Email, etc.)
 5. **Activate** the workflow
-6. Get your Pay to Run form URL (see below)
 
-### 4. Get Your Pay to Run Form URL
-
-There are two ways to find your form URL:
+### 2. Get Your Pay to Run Form URL
 
 **Option A: POST to Webhook URL (Recommended)**
-1. Copy the webhook URL shown in the n8n trigger panel
-2. Send an empty POST request: `curl -X POST <webhook-url>`
-3. You'll get back your form URL and instructions:
+
+```bash
+curl -X POST <your-webhook-url>
+```
+
+Response:
 ```json
 {
-  "message": "xpay✦ pay-to-run trigger is listening!",
+  "message": "xpay pay-to-run trigger is listening!",
   "form_url": "https://run.xpay.sh/p/chk_abc123",
-  "test_mode": true,
-  "instructions": "Test mode is ON. Send a POST with {\"payment\": ...} to simulate."
+  "test_mode": true
 }
 ```
 
-**Option B: Check Server Logs**
-1. Activate the workflow
-2. Check your n8n server logs for: `Form URL: https://run.xpay.sh/p/...`
+**Option B: Check n8n Logs**
 
-### 5. Test in Sandbox Mode
+After activating, check your n8n server logs for the form URL.
+
+### 3. Test in Sandbox Mode
 
 With **Test Mode** enabled:
 - No real payments required
-- No signature verification on webhooks (easier testing)
-- Click "Simulate Payment" on the Pay to Run form
-- Or POST test data directly to your webhook:
+- Signature verification is skipped
+- Use "Simulate Payment" on the form, or POST test data:
+
 ```bash
-curl -X POST <webhook-url> \
+curl -X POST <your-webhook-url> \
   -H "Content-Type: application/json" \
-  -d '{"payment":{"amount":5},"input":{"email":"test@test.com"}}'
+  -d '{"payment":{"amount":5},"input":{"email":"test@example.com"}}'
 ```
-
-## Test Mode vs Production Mode
-
-**Important:** When you test a workflow in n8n (clicking "Execute workflow" or "Test step"), a new temporary checkout is created. This checkout becomes inactive when you stop testing.
-
-**For a persistent Pay to Run form URL:**
-1. **Activate** the workflow (toggle the switch in the top-right)
-2. The form URL will remain active as long as the workflow is active
-3. The same URL works for all customers - no need to generate new ones
 
 ## Node Properties
 
 | Property | Description |
 |----------|-------------|
-| **Product Name** | What customers are paying for |
-| **Description** | Brief description shown on payment page |
+| **Product Name** | Display name shown on payment form |
+| **Description** | Brief description of what customer is paying for |
 | **Price (USDC)** | Amount in USDC (e.g., 5.00 = $5) |
 | **Network** | Base (production) or Base Sepolia (testnet) |
-| **Recipient Wallet** | Your wallet address to receive payments |
-| **Customer Form Fields** | Input fields customers must fill |
-| **Redirect URL** | Where to send customers after payment |
+| **Recipient Wallet** | Your wallet address for receiving payments |
+| **Customer Fields** | Custom input fields for customers to fill |
+| **Redirect URL** | Optional URL to redirect after payment |
 | **Test Mode** | Enable sandbox mode (no real payments) |
 
 ## Output Data
 
-When a payment is received, the workflow gets:
+When a payment is received, your workflow receives:
 
 ```json
 {
@@ -139,28 +152,51 @@ When a payment is received, the workflow gets:
 }
 ```
 
+## Test Mode vs Production Mode
+
+| Aspect | Test Mode | Production Mode |
+|--------|-----------|-----------------|
+| Payments | Simulated | Real USDC |
+| Network | Base Sepolia | Base Mainnet |
+| Signature verification | Skipped | Enforced |
+| Form URL | Temporary (test only) | Persistent (while active) |
+
+**Note:** When testing in n8n (clicking "Execute workflow"), a temporary checkout is created. For a persistent URL, **Activate** the workflow.
+
 ## Use Cases
 
-- **SEO Audits**: Charge $10 per website audit
-- **Report Generation**: Sell custom reports
-- **API Access**: Monetize your APIs per-request
+- **SEO Audits**: Charge per website audit
+- **Report Generation**: Sell custom data reports
+- **API Access**: Monetize per-request API usage
 - **Consultations**: Accept payment before scheduling
 - **Digital Products**: Deliver files after payment
-- **Lead Generation**: Qualify leads with payment
+- **Lead Generation**: Qualify leads with payment intent
 
 ## Security
 
-- **Non-custodial**: Payments go directly to your wallet
-- **Signature verification**: All webhooks are HMAC-signed (production mode)
-- **Replay protection**: Each payment can only trigger once
-- **Timestamp validation**: Old requests are rejected
+- **Non-custodial**: Payments flow directly to your wallet
+- **HMAC signatures**: Webhooks are signed (production mode)
+- **Replay protection**: Each payment triggers only once
+- **Timestamp validation**: Stale requests are rejected
+
+## Compatibility
+
+- **n8n version**: 1.0.0+
+- **Node.js**: 18.10+
+- **Networks**: Base Mainnet, Base Sepolia
+
+## Resources
+
+- [xpay Documentation](https://docs.xpay.sh)
+- [xpay Dashboard](https://app.xpay.sh)
+- [n8n Community Nodes Guide](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Support
 
-- Documentation: [docs.xpay.sh/integrations/n8n](https://docs.xpay.sh/integrations/n8n)
-- Issues: [GitHub Issues](https://github.com/xpay-sh/n8n-nodes-xpay/issues)
-- Email: xpaysh@gmail.com
+- **Issues**: [GitHub Issues](https://github.com/xpaysh/n8n-nodes-xpay/issues)
+- **Email**: xpaysh@gmail.com
+- **Website**: [xpay.sh](https://xpay.sh)
 
 ## License
 
-MIT
+[MIT](LICENSE)

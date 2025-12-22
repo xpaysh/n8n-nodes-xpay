@@ -1,6 +1,6 @@
 {
   "name": "@xpaysh/n8n-nodes-xpay",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Monetize your n8n workflows with xpay✦ payments. Create pay-to-run workflows in 60 seconds.",
   "keywords": [
     "n8n-community-node-package",
@@ -20,7 +20,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/xpay-sh/n8n-nodes-xpay.git"
+    "url": "git+https://github.com/xpaysh/n8n-nodes-xpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xpaysh/n8n-nodes-xpay/issues"
   },
   "homepage": "https://xpay.sh",
   "main": "dist/index.js",
