@@ -54,7 +54,7 @@ export class XPayTrigger implements INodeType {
 				inactive: 'Activate the workflow to generate your Pay to Run form URL. POST an empty body to the webhook URL to get it.',
 				active: 'Workflow is active! POST an empty body to the webhook URL shown above to get your Pay to Run form URL.',
 			},
-			activationHint: 'Activate the workflow (not just test) to keep your Pay to Run form URL active.',
+			activationHint: 'POST an empty body {} to the webhook URL above to get your form URL, then simulate a test payment.',
 		},
 		properties: [
 			// Instructions notice with actual content
