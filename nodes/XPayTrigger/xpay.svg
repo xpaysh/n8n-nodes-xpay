@@ -1,5 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" fill="none">
-  <rect width="60" height="60" rx="8" fill="#00A76F"/>
-  <path d="M30 12C20.059 12 12 20.059 12 30C12 39.941 20.059 48 30 48C39.941 48 48 39.941 48 30C48 20.059 39.941 12 30 12ZM32.5 38.5V41H27.5V38.5C24.738 38.025 22.5 35.787 22.5 33H27.5C27.5 34.381 28.619 35.5 30 35.5C31.381 35.5 32.5 34.381 32.5 33C32.5 31.619 31.381 30.5 30 30.5C26.41 30.5 23.5 27.59 23.5 24C23.5 21.213 25.738 18.975 28.5 18.5V16H33.5V18.5C36.262 18.975 38.5 21.213 38.5 24H33.5C33.5 22.619 32.381 21.5 31 21.5C29.619 21.5 28.5 22.619 28.5 24C28.5 25.381 29.619 26.5 31 26.5C34.59 26.5 37.5 29.41 37.5 33C37.5 35.787 35.262 38.025 32.5 38.5Z" fill="white"/>
-  <path d="M14 22L18 18M46 38L42 42M14 38L18 42M46 22L42 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <!-- Background -->
+  <rect x="0" y="0" width="60" height="60" rx="8" ry="8" fill="#131929"/>
+
+  <!-- Left curly brace { -->
+  <path d="M15 12 Q10 12 10 17 L10 25 Q10 30 6 30 Q10 30 10 35 L10 43 Q10 48 15 48"
+        stroke="#2dd4bf" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- Right curly brace } -->
+  <path d="M45 12 Q50 12 50 17 L50 25 Q50 30 54 30 Q50 30 50 35 L50 43 Q50 48 45 48"
+        stroke="#2dd4bf" stroke-width="4" fill="none" stroke-linecap="round"/>
+
+  <!-- X letter -->
+  <path d="M22 20 L38 40 M38 20 L22 40"
+        stroke="#ffffff" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Sparkle ✦ -->
+  <path d="M42 18 L44 14 L46 18 L50 20 L46 22 L44 26 L42 22 L38 20 Z"
+        fill="#f59e0b"/>
 </svg>
