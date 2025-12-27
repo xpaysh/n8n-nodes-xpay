@@ -208,6 +208,13 @@ export class XPayTrigger implements INodeType {
 				default: true,
 				description: 'Whether to enable sandbox mode (no real payments required)',
 			},
+			{
+				displayName: 'Enable Bundles',
+				name: 'enableBundles',
+				type: 'boolean',
+				default: false,
+				description: 'Allow customers to purchase run bundles at discounted rates. Configure bundle tiers in the xpay dashboard (app.xpay.sh).',
+			},
 
 			// Advanced Options
 			{
@@ -278,6 +285,7 @@ export class XPayTrigger implements INodeType {
 				const fieldsData = this.getNodeParameter('fields') as IDataObject;
 				const redirectUrl = this.getNodeParameter('redirectUrl', '') as string;
 				const testMode = this.getNodeParameter('testMode') as boolean;
+				const enableBundles = this.getNodeParameter('enableBundles', false) as boolean;
 
 				// Format fields for API
 				const fields = ((fieldsData.fieldValues as IDataObject[]) || []).map((field) => ({
@@ -310,6 +318,7 @@ export class XPayTrigger implements INodeType {
 							fields: fields,
 							redirect_url: redirectUrl,
 							test_mode: testMode,
+							bundles_enabled: enableBundles,
 						},
 					},
 					json: true,
