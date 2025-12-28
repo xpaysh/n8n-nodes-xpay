@@ -100,23 +100,28 @@ export class XPayTrigger implements INodeType {
 				description: 'Price in USD. Under $1: crypto wallet only. $1+: wallet or card. All payments settle in USDC on-chain.',
 			},
 			{
-				displayName: 'Network',
-				name: 'network',
+				displayName: 'Environment',
+				name: 'environment',
 				type: 'options',
 				options: [
 					{
-						name: 'Base',
-						value: 'base',
-						description: 'Base Mainnet (production)',
+						name: 'Development',
+						value: 'development',
+						description: 'Simulated payments for testing. No real transactions.',
 					},
 					{
-						name: 'Base Sepolia',
-						value: 'base-sepolia',
-						description: 'Base Sepolia (testnet)',
+						name: 'Staging',
+						value: 'staging',
+						description: 'Test network with free test tokens. Real blockchain, no real money.',
+					},
+					{
+						name: 'Production',
+						value: 'production',
+						description: 'Live payments with real money. Use only when ready to go live.',
 					},
 				],
-				default: 'base-sepolia',
-				description: 'Use Base Sepolia for testing, Base Mainnet for production. Determines which network receives payments.',
+				default: 'development',
+				description: 'Choose Development to test your workflow, Staging for test transactions, or Production for real payments.',
 			},
 
 			// Recipient Wallet
@@ -202,13 +207,6 @@ export class XPayTrigger implements INodeType {
 				description: 'URL to redirect customers after successful payment. Leave empty to show a success message instead.',
 			},
 			{
-				displayName: 'Test Mode',
-				name: 'testMode',
-				type: 'boolean',
-				default: true,
-				description: 'Enable to test without real payments. Webhooks still fire with test data. Disable for production.',
-			},
-			{
 				displayName: 'Enable Bundles',
 				name: 'enableBundles',
 				type: 'boolean',
@@ -281,11 +279,21 @@ export class XPayTrigger implements INodeType {
 				}
 				const description = this.getNodeParameter('description', '') as string;
 				const amount = this.getNodeParameter('amount') as number;
-				const network = this.getNodeParameter('network') as string;
+				const environment = this.getNodeParameter('environment', 'development') as string;
 				const fieldsData = this.getNodeParameter('fields') as IDataObject;
 				const redirectUrl = this.getNodeParameter('redirectUrl', '') as string;
-				const testMode = this.getNodeParameter('testMode') as boolean;
 				const enableBundles = this.getNodeParameter('enableBundles', false) as boolean;
+
+				// Derive testMode and network from environment
+				let testMode = true;
+				let network = 'base-sepolia';
+				if (environment === 'staging') {
+					testMode = false;
+					network = 'base-sepolia';
+				} else if (environment === 'production') {
+					testMode = false;
+					network = 'base';
+				}
 
 				// Format fields for API
 				const fields = ((fieldsData.fieldValues as IDataObject[]) || []).map((field) => ({
@@ -465,8 +473,11 @@ export class XPayTrigger implements INodeType {
 		const body = this.getBodyData() as IDataObject;
 		const headers = this.getHeaderData() as IDataObject;
 		const webhookSecret = webhookData.webhookSecret as string;
-		const testMode = this.getNodeParameter('testMode', true) as boolean;
 		const checkoutUrl = webhookData.checkoutUrl as string;
+
+		// Derive testMode from environment
+		const environment = this.getNodeParameter('environment', 'development') as string;
+		const testMode = environment === 'development';
 
 		// If empty body or _getInfo flag, return helpful info
 		if (!body || Object.keys(body).length === 0 || body._getInfo) {
