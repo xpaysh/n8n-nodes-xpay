@@ -74,8 +74,9 @@ npm link @xpaysh/n8n-nodes-xpay
 2. Add the **xpay pay-to-run trigger** node
 3. Configure:
    - **Product Name**: e.g., "Premium SEO Audit"
-   - **Price (USDC)**: e.g., 5.00
-   - **Recipient Wallet**: Your Base wallet address
+   - **Price**: e.g., 5.00 (prices $1+ accept card payments)
+   - **Environment**: Development (for testing)
+   - **Recipient Wallet**: Default Wallet or Custom Wallet
    - **Customer Fields**: Add fields like "email", "website"
 4. Connect your workflow nodes (HTTP Request, Send Email, etc.)
 5. **Activate** the workflow
@@ -101,10 +102,10 @@ Response:
 
 After activating, check your n8n server logs for the form URL.
 
-### 3. Test in Sandbox Mode
+### 3. Test in Development Mode
 
-With **Test Mode** enabled:
-- No real payments required
+With **Environment: Development**:
+- Simulated payments - no real transactions
 - Signature verification is skipped
 - Use "Simulate Payment" on the form, or POST test data:
 
@@ -120,12 +121,12 @@ curl -X POST <your-webhook-url> \
 |----------|-------------|
 | **Product Name** | Display name shown on payment form |
 | **Description** | Brief description of what customer is paying for |
-| **Price (USDC)** | Amount in USDC (e.g., 5.00 = $5) |
-| **Network** | Base (production) or Base Sepolia (testnet) |
-| **Recipient Wallet** | Your wallet address for receiving payments |
+| **Price** | Amount in USD. Under $1: crypto wallet only. $1+: wallet or card. All payments settle in USDC. |
+| **Environment** | Development (simulated), Staging (test network), or Production (real money) |
+| **Recipient Wallet** | Default Wallet (your xpay account) or Custom Wallet (specify address) |
 | **Customer Fields** | Custom input fields for customers to fill |
 | **Redirect URL** | Optional URL to redirect after payment |
-| **Test Mode** | Enable sandbox mode (no real payments) |
+| **Enable Bundles** | Let customers prepay for multiple runs at discounted rates |
 
 ## Output Data
 
@@ -152,14 +153,13 @@ When a payment is received, your workflow receives:
 }
 ```
 
-## Test Mode vs Production Mode
+## Environment Modes
 
-| Aspect | Test Mode | Production Mode |
-|--------|-----------|-----------------|
-| Payments | Simulated | Real USDC |
-| Network | Base Sepolia | Base Mainnet |
-| Signature verification | Skipped | Enforced |
-| Form URL | Temporary (test only) | Persistent (while active) |
+| Environment | Payments | Network | Use Case |
+|-------------|----------|---------|----------|
+| **Development** | Simulated (no real transactions) | Base Sepolia | Testing workflow logic |
+| **Staging** | Real test tokens (free) | Base Sepolia | Testing with actual blockchain |
+| **Production** | Real USDC | Base Mainnet | Live payments |
 
 **Note:** When testing in n8n (clicking "Execute workflow"), a temporary checkout is created. For a persistent URL, **Activate** the workflow.
 
@@ -196,6 +196,60 @@ When a payment is received, your workflow receives:
 - **Issues**: [GitHub Issues](https://github.com/xpaysh/n8n-nodes-xpay/issues)
 - **Email**: xpaysh@gmail.com
 - **Website**: [xpay.sh](https://xpay.sh)
+
+## Development & Publishing
+
+### Setup
+
+```bash
+git clone https://github.com/xpaysh/n8n-nodes-xpay.git
+cd n8n-nodes-xpay
+npm install
+npm run build
+```
+
+### Publishing Checklist
+
+Before publishing a new version:
+
+1. **Update code** - Make your changes to `nodes/XPayTrigger/XPayTrigger.node.ts`
+2. **Update README** - Update this file if properties or behavior changed
+3. **Bump version** - Update version in `package.json`
+4. **Build** - Run `npm run build` and verify no errors
+5. **Test locally** - Link to local n8n and test the node works
+6. **Commit** - `git add . && git commit -m "description"`
+7. **Push** - `git push origin main`
+8. **Publish** - Run the publish command below
+
+### Publishing Commands
+
+```bash
+# Login to npm (required if token expired)
+npm login
+
+# Publish with public access (scoped package)
+npm publish --access public
+```
+
+### Version Bumping
+
+```bash
+# Patch release (0.1.3 -> 0.1.4) - bug fixes
+npm version patch
+
+# Minor release (0.1.3 -> 0.2.0) - new features
+npm version minor
+
+# Major release (0.1.3 -> 1.0.0) - breaking changes
+npm version major
+```
+
+### Post-Publish
+
+After publishing:
+1. Verify on npm: https://www.npmjs.com/package/@xpaysh/n8n-nodes-xpay
+2. Test installation: `npm install @xpaysh/n8n-nodes-xpay`
+3. Create GitHub release with changelog (optional)
 
 ## License
 

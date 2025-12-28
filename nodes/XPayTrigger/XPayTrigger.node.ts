@@ -127,15 +127,35 @@ export class XPayTrigger implements INodeType {
 			// Recipient Wallet
 			{
 				displayName: 'Recipient Wallet',
-				name: 'recipientWallet',
+				name: 'walletType',
+				type: 'options',
+				options: [
+					{
+						name: 'Default Wallet',
+						value: 'default',
+						description: 'Use your xpay account wallet (created automatically when you signed up)',
+					},
+					{
+						name: 'Custom Wallet',
+						value: 'custom',
+						description: 'Specify a different wallet address to receive payments',
+					},
+				],
+				default: 'default',
+				description: 'Choose where to receive payments. Manage wallets at app.xpay.sh',
+			},
+			{
+				displayName: 'Wallet Address',
+				name: 'customWalletAddress',
 				type: 'string',
 				default: '',
 				required: true,
 				placeholder: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00',
 				description: 'Your wallet address to receive USDC payments. Must be a valid Ethereum/Base address (0x...).',
-				validateType: 'string',
-				typeOptions: {
-					validationMessage: 'Must be a valid Ethereum address (42 characters starting with 0x)',
+				displayOptions: {
+					show: {
+						walletType: ['custom'],
+					},
 				},
 			},
 
@@ -271,12 +291,18 @@ export class XPayTrigger implements INodeType {
 
 				// Get node parameters
 				const productName = this.getNodeParameter('productName') as string;
-				const recipientWallet = this.getNodeParameter('recipientWallet') as string;
+				const walletType = this.getNodeParameter('walletType', 'default') as string;
 
-				// Validate wallet address format
-				if (!recipientWallet || !/^0x[a-fA-F0-9]{40}$/.test(recipientWallet)) {
-					throw new Error('Invalid wallet address. Must be 42 characters starting with 0x (e.g., 0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00)');
+				// Determine recipient wallet
+				let recipientWallet = '';
+				if (walletType === 'custom') {
+					recipientWallet = this.getNodeParameter('customWalletAddress', '') as string;
+					// Validate wallet address format for custom wallets
+					if (!recipientWallet || !/^0x[a-fA-F0-9]{40}$/.test(recipientWallet)) {
+						throw new Error('Invalid wallet address. Must be 42 characters starting with 0x (e.g., 0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00)');
+					}
 				}
+				// If walletType is 'default', recipientWallet stays empty and backend uses user's default wallet
 				const description = this.getNodeParameter('description', '') as string;
 				const amount = this.getNodeParameter('amount') as number;
 				const environment = this.getNodeParameter('environment', 'development') as string;
