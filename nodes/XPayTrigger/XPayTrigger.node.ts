@@ -59,7 +59,7 @@ export class XPayTrigger implements INodeType {
 		properties: [
 			// Instructions notice with actual content
 			{
-				displayName: 'After activating, POST an empty body {} to the webhook URL above. You will receive your Pay to Run form URL in the response.',
+				displayName: 'After activating, POST {} to the webhook URL above to get your checkout URL. Manage all settings anytime at app.xpay.sh',
 				name: 'notice',
 				type: 'notice',
 				default: '',
@@ -72,7 +72,7 @@ export class XPayTrigger implements INodeType {
 				default: '',
 				required: true,
 				placeholder: 'e.g., Premium SEO Audit',
-				description: 'The name of what customers are paying for',
+				description: 'Name displayed on the checkout page. Can be updated anytime at app.xpay.sh',
 			},
 			{
 				displayName: 'Description',
@@ -83,12 +83,12 @@ export class XPayTrigger implements INodeType {
 				},
 				default: '',
 				placeholder: 'Brief description of what the customer will receive',
-				description: 'A short description shown on the payment page',
+				description: 'Brief description shown below the product name. Supports basic formatting.',
 			},
 
 			// Pricing Section
 			{
-				displayName: 'Price (USDC)',
+				displayName: 'Price',
 				name: 'amount',
 				type: 'number',
 				default: 1.0,
@@ -97,7 +97,7 @@ export class XPayTrigger implements INodeType {
 					minValue: 0.01,
 					numberPrecision: 2,
 				},
-				description: 'Price in USDC (e.g., 5.00 for $5)',
+				description: 'Price in USD. Under $1: crypto wallet only. $1+: wallet or card. All payments settle in USDC on-chain.',
 			},
 			{
 				displayName: 'Network',
@@ -116,7 +116,7 @@ export class XPayTrigger implements INodeType {
 					},
 				],
 				default: 'base-sepolia',
-				description: 'Blockchain network for payments',
+				description: 'Use Base Sepolia for testing, Base Mainnet for production. Determines which network receives payments.',
 			},
 
 			// Recipient Wallet
@@ -127,7 +127,7 @@ export class XPayTrigger implements INodeType {
 				default: '',
 				required: true,
 				placeholder: '0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00',
-				description: 'Your Ethereum wallet address (42 characters, starting with 0x)',
+				description: 'Your wallet address to receive USDC payments. Must be a valid Ethereum/Base address (0x...).',
 				validateType: 'string',
 				typeOptions: {
 					validationMessage: 'Must be a valid Ethereum address (42 characters starting with 0x)',
@@ -144,7 +144,7 @@ export class XPayTrigger implements INodeType {
 				},
 				default: {},
 				placeholder: 'Add Field',
-				description: 'Form fields the customer must fill before paying',
+				description: 'Collect information from customers before payment. Data is included in the webhook payload.',
 				options: [
 					{
 						name: 'fieldValues',
@@ -199,21 +199,21 @@ export class XPayTrigger implements INodeType {
 				type: 'string',
 				default: '',
 				placeholder: 'https://yoursite.com/thank-you',
-				description: 'Where to send customers after successful payment (optional)',
+				description: 'URL to redirect customers after successful payment. Leave empty to show a success message instead.',
 			},
 			{
 				displayName: 'Test Mode',
 				name: 'testMode',
 				type: 'boolean',
 				default: true,
-				description: 'Whether to enable sandbox mode (no real payments required)',
+				description: 'Enable to test without real payments. Webhooks still fire with test data. Disable for production.',
 			},
 			{
 				displayName: 'Enable Bundles',
 				name: 'enableBundles',
 				type: 'boolean',
 				default: false,
-				description: 'Allow customers to purchase run bundles at discounted rates. Configure bundle tiers in the xpay dashboard (app.xpay.sh).',
+				description: 'Let customers prepay for multiple runs at discounted rates. Configure tier pricing at app.xpay.sh after activation.',
 			},
 
 			// Advanced Options
