@@ -329,12 +329,13 @@ export class XPayTrigger implements INodeType {
 					required: field.required,
 				}));
 
-				// Determine API base URL
-				// TODO: Update to api.xpay.sh once DNS is configured
-				const apiBaseUrl =
-					credentials.environment === 'production'
-						? 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev'
-						: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev';
+				// Determine API base URL based on environment selection
+				const apiBaseUrls: Record<string, string> = {
+					development: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev',
+					staging: 'https://hkrqani0b0.execute-api.us-east-1.amazonaws.com/staging',
+					production: 'https://m8efqvrb1b.execute-api.us-east-1.amazonaws.com/prod',
+				};
+				const apiBaseUrl = apiBaseUrls[environment] || apiBaseUrls.development;
 
 				// Register webhook with xPay API
 				const requestOptions: IHttpRequestOptions = {
@@ -374,6 +375,7 @@ export class XPayTrigger implements INodeType {
 					webhookData.checkoutId = response.checkout_id;
 					webhookData.checkoutUrl = response.checkout_url;
 					webhookData.webhookSecret = response.webhook_secret;
+					webhookData.environment = environment; // Store for delete
 
 					// Log the checkout URL for the builder to copy
 					console.log('\n========================================');
@@ -402,17 +404,19 @@ export class XPayTrigger implements INodeType {
 			async delete(this: IHookFunctions): Promise<boolean> {
 				const webhookData = this.getWorkflowStaticData('node');
 				const checkoutId = webhookData.checkoutId as string;
+				const environment = (webhookData.environment as string) || 'development';
 
 				if (!checkoutId || checkoutId === 'local-test') {
 					return true;
 				}
 
-				const credentials = await this.getCredentials('xPayApi');
-				// TODO: Update to api.xpay.sh once DNS is configured
-				const apiBaseUrl =
-					credentials.environment === 'production'
-						? 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev'
-						: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev';
+				// Determine API base URL based on stored environment
+				const apiBaseUrls: Record<string, string> = {
+					development: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev',
+					staging: 'https://hkrqani0b0.execute-api.us-east-1.amazonaws.com/staging',
+					production: 'https://m8efqvrb1b.execute-api.us-east-1.amazonaws.com/prod',
+				};
+				const apiBaseUrl = apiBaseUrls[environment] || apiBaseUrls.development;
 
 				try {
 					await this.helpers.httpRequestWithAuthentication.call(this, 'xPayApi', {
@@ -429,6 +433,7 @@ export class XPayTrigger implements INodeType {
 				delete webhookData.checkoutId;
 				delete webhookData.checkoutUrl;
 				delete webhookData.webhookSecret;
+				delete webhookData.environment;
 
 				return true;
 			},
