@@ -18,8 +18,8 @@ export const GLYPH_ROUTER_URLS: Record<Environment, string> = {
 
 // Smart Proxy API
 export const SMART_PROXY_URLS: Record<Environment, string> = {
-	sandbox: 'https://nrq1ybv1u6.execute-api.us-east-1.amazonaws.com/dev',
-	production: 'https://nrq1ybv1u6.execute-api.us-east-1.amazonaws.com/dev', // TODO: Update for production
+	sandbox: 'https://9o3kiqjr72.execute-api.us-east-1.amazonaws.com/dev',
+	production: 'https://9o3kiqjr72.execute-api.us-east-1.amazonaws.com/dev', // TODO: Update for production
 };
 
 // Pay-to-Run API (for XPayTrigger - kept for reference)
