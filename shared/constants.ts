@@ -47,7 +47,7 @@ export const ENDPOINTS = {
 	RUN_STATUS: '/run/status', // + /{runId}
 
 	// Smart Proxy
-	PROXY: '/proxy',
+	PROXY: '/n8n/proxy',
 	POLICY_SESSION: '/policy/session',
 	AGENTS: '/agents',
 	CUSTOMERS: '/customers',
