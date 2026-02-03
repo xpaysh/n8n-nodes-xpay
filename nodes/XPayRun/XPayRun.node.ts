@@ -20,7 +20,7 @@ export class XPayRun implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
-		description: 'Execute glyphs with automatic payment handling and status tracking',
+		description: 'Execute services with automatic payment handling and status tracking',
 		defaults: {
 			name: 'xpay✦ Run',
 		},
@@ -43,7 +43,7 @@ export class XPayRun implements INodeType {
 					{
 						name: 'Run Sync',
 						value: 'runSync',
-						description: 'Execute a glyph and wait for the result',
+						description: 'Execute a service and wait for the result',
 						action: 'Run sync',
 					},
 					{
@@ -72,8 +72,8 @@ export class XPayRun implements INodeType {
 			// RUN PARAMETERS (runSync, runAsync)
 			// ============================================
 			{
-				displayName: 'Glyph Slug',
-				name: 'glyphSlug',
+				displayName: 'Service Slug',
+				name: 'serviceSlug',
 				type: 'string',
 				displayOptions: {
 					show: {
@@ -83,7 +83,7 @@ export class XPayRun implements INodeType {
 				default: '',
 				required: true,
 				placeholder: 'e.g., account-intel',
-				description: 'The slug or ID of the glyph to execute. You can use expressions like {{ $json.glyph.slug }} from XPayDiscover.',
+				description: 'The slug or ID of the service to execute. Use {{ $json.services[0].serviceSlug }} from xpay✦ Discover.',
 			},
 			{
 				displayName: 'Model',
@@ -115,7 +115,7 @@ export class XPayRun implements INodeType {
 				},
 				default: {},
 				placeholder: 'Add Input',
-				description: 'Input values for the glyph. Check the glyph schema for required fields.',
+				description: 'Input values for the service. Check the service schema for required fields.',
 				options: [
 					{
 						name: 'inputValues',
@@ -186,7 +186,7 @@ export class XPayRun implements INodeType {
 				default: '',
 				required: true,
 				placeholder: 'e.g., run_abc123',
-				description: 'The run ID from a previous async execution. You can use {{ $json.runId }} from a previous XPayRun node.',
+				description: 'The run ID from a previous async execution. Use {{ $json.runId }} from a previous xpay✦ Run node.',
 			},
 
 			// ============================================
@@ -261,7 +261,7 @@ export class XPayRun implements INodeType {
 				// RUN SYNC
 				// ============================================
 				if (operation === 'runSync') {
-					const glyphSlug = this.getNodeParameter('glyphSlug', i) as string;
+					const serviceSlug = this.getNodeParameter('serviceSlug', i) as string;
 					const modelId = this.getNodeParameter('modelId', i) as string;
 					const inputsCollection = this.getNodeParameter('inputs', i) as {
 						inputValues?: Array<{ key: string; value: string }>;
@@ -273,8 +273,9 @@ export class XPayRun implements INodeType {
 
 					const inputs = parseInputsCollection(inputsCollection);
 
+					// API uses glyphSlug internally
 					const runParams: any = {
-						glyphSlug,
+						glyphSlug: serviceSlug,
 						modelId,
 						inputs,
 					};
@@ -295,7 +296,7 @@ export class XPayRun implements INodeType {
 						error: response.error,
 						cost: response.cost,
 						duration: response.duration || response.latencyMs,
-						glyphSlug,
+						serviceSlug,
 						modelId,
 					};
 				}
@@ -304,7 +305,7 @@ export class XPayRun implements INodeType {
 				// RUN ASYNC
 				// ============================================
 				else if (operation === 'runAsync') {
-					const glyphSlug = this.getNodeParameter('glyphSlug', i) as string;
+					const serviceSlug = this.getNodeParameter('serviceSlug', i) as string;
 					const modelId = this.getNodeParameter('modelId', i) as string;
 					const inputsCollection = this.getNodeParameter('inputs', i) as {
 						inputValues?: Array<{ key: string; value: string }>;
@@ -318,8 +319,9 @@ export class XPayRun implements INodeType {
 
 					const inputs = parseInputsCollection(inputsCollection);
 
+					// API uses glyphSlug internally
 					const runParams: any = {
-						glyphSlug,
+						glyphSlug: serviceSlug,
 						modelId,
 						inputs,
 					};
@@ -350,7 +352,7 @@ export class XPayRun implements INodeType {
 							status: 'processing',
 							statusUrl: asyncResult.statusUrl,
 							message: asyncResult.message || 'Execution started',
-							glyphSlug,
+							serviceSlug,
 							modelId,
 						};
 					} else {
@@ -364,7 +366,7 @@ export class XPayRun implements INodeType {
 									runId: asyncResult.runId,
 									status: 'timeout',
 									error: `Execution did not complete within ${pollingTimeout} seconds`,
-									glyphSlug,
+									serviceSlug,
 									modelId,
 								};
 								break;
@@ -385,7 +387,7 @@ export class XPayRun implements INodeType {
 									output: statusResult.output,
 									cost: statusResult.cost,
 									duration: statusResult.duration,
-									glyphSlug,
+									serviceSlug,
 									modelId,
 								};
 								break;
@@ -396,7 +398,7 @@ export class XPayRun implements INodeType {
 									runId: asyncResult.runId,
 									status: 'failed',
 									error: statusResult.error,
-									glyphSlug,
+									serviceSlug,
 									modelId,
 								};
 								break;

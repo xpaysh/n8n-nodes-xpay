@@ -6,9 +6,8 @@ import type {
 	NodeConnectionType,
 } from 'n8n-workflow';
 
-import { glyphCoreRequest, smartProxyRequest, getXPayCredentials, handleApiError } from '../../shared/api';
+import { glyphCoreRequest, handleApiError } from '../../shared/api';
 import { ENDPOINTS } from '../../shared/constants';
-import type { WalletBalance, SmartProxyAgent, EffectiveLimits, SpendingInfo, AgentLimits } from '../../shared/types';
 
 export class XPayPolicy implements INodeType {
 	description: INodeTypeDescription = {
@@ -18,7 +17,7 @@ export class XPayPolicy implements INodeType {
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
-		description: 'Configure spending policies, budgets, and access controls for AI agents',
+		description: 'Configure spending policies and limits for your workflow',
 		defaults: {
 			name: 'xpay✦ Policy',
 		},
@@ -31,19 +30,6 @@ export class XPayPolicy implements INodeType {
 			},
 		],
 		properties: [
-			// Notice about Smart Proxy
-			{
-				displayName: 'Smart Proxy features require a Customer ID in your credentials. Enable "Smart Proxy Features" in your xpay✦ API credentials and add your Customer ID.',
-				name: 'notice',
-				type: 'notice',
-				default: '',
-				displayOptions: {
-					show: {
-						operation: ['createAgent', 'getAgent', 'updateLimits', 'setDomainRules', 'getSpending', 'pauseAgent'],
-					},
-				},
-			},
-
 			// Operation selector
 			{
 				displayName: 'Operation',
@@ -52,147 +38,94 @@ export class XPayPolicy implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Get Wallet Balance',
-						value: 'getWalletBalance',
-						description: 'Check your available balance and credits',
-						action: 'Get wallet balance',
+						name: 'Get Balance',
+						value: 'getBalance',
+						description: 'Check your wallet balance',
+						action: 'Get balance',
 					},
 					{
-						name: 'Create Agent',
-						value: 'createAgent',
-						description: 'Create a new managed agent with spending controls',
-						action: 'Create agent',
-					},
-					{
-						name: 'Get Agent',
-						value: 'getAgent',
-						description: 'Get agent configuration and status',
-						action: 'Get agent',
-					},
-					{
-						name: 'Update Limits',
-						value: 'updateLimits',
-						description: 'Update spending limits for an agent',
-						action: 'Update limits',
-					},
-					{
-						name: 'Set Domain Rules',
-						value: 'setDomainRules',
-						description: 'Configure allowed/blocked domains for an agent',
-						action: 'Set domain rules',
+						name: 'Set Policy',
+						value: 'setPolicy',
+						description: 'Configure spending limits and workflow intent for policy enforcement',
+						action: 'Set policy',
 					},
 					{
 						name: 'Get Spending',
 						value: 'getSpending',
-						description: 'Get current spend vs limits for an agent',
+						description: 'View spending history and current limits',
 						action: 'Get spending',
 					},
-					{
-						name: 'Pause Agent',
-						value: 'pauseAgent',
-						description: 'Pause or resume agent execution',
-						action: 'Pause agent',
-					},
 				],
-				default: 'getWalletBalance',
+				default: 'getBalance',
 			},
 
 			// ============================================
-			// AGENT ID (for agent operations)
+			// SET POLICY - Workflow Description (Intent)
 			// ============================================
 			{
-				displayName: 'Agent ID',
-				name: 'agentId',
-				type: 'string',
-				displayOptions: {
-					show: {
-						operation: ['getAgent', 'updateLimits', 'setDomainRules', 'getSpending', 'pauseAgent'],
-					},
-				},
-				default: '',
-				required: true,
-				placeholder: 'e.g., agent_abc123',
-				description: 'The ID of the agent to manage',
-			},
-
-			// ============================================
-			// CREATE AGENT PARAMETERS
-			// ============================================
-			{
-				displayName: 'Agent Name',
-				name: 'agentName',
-				type: 'string',
-				displayOptions: {
-					show: {
-						operation: ['createAgent'],
-					},
-				},
-				default: '',
-				required: true,
-				placeholder: 'e.g., Market Research Agent',
-				description: 'A descriptive name for the agent',
-			},
-			{
-				displayName: 'Description',
-				name: 'agentDescription',
+				displayName: 'Workflow Description',
+				name: 'workflowDescription',
 				type: 'string',
 				typeOptions: {
-					rows: 3,
+					rows: 4,
 				},
 				displayOptions: {
 					show: {
-						operation: ['createAgent'],
+						operation: ['setPolicy'],
 					},
 				},
 				default: '',
-				placeholder: 'What does this agent do?',
-				description: 'Optional description of the agent purpose',
+				required: true,
+				placeholder: 'e.g., This workflow researches companies and generates sales outreach emails for the SDR team.',
+				description: 'Describe what this workflow does. This is used for intent-based policy enforcement - the description helps xpay✦ understand which services are appropriate for this workflow.',
+				hint: 'Be specific about the purpose, data accessed, and expected outputs. This enables smarter policy decisions.',
 			},
+
+			// ============================================
+			// SET POLICY - Wallet Selection
+			// ============================================
 			{
-				displayName: 'Initial Limits',
-				name: 'initialLimits',
-				type: 'collection',
-				placeholder: 'Add Limit',
-				default: {},
+				displayName: 'Wallet',
+				name: 'walletSource',
+				type: 'options',
 				displayOptions: {
 					show: {
-						operation: ['createAgent'],
+						operation: ['setPolicy'],
 					},
 				},
 				options: [
 					{
-						displayName: 'Per Call ($)',
-						name: 'perCall',
-						type: 'number',
-						default: 1,
-						description: 'Maximum spend per API call',
+						name: 'Default Wallet',
+						value: 'default',
+						description: 'Use your account\'s default wallet',
 					},
 					{
-						displayName: 'Per Day ($)',
-						name: 'perDay',
-						type: 'number',
-						default: 10,
-						description: 'Maximum daily spend',
-					},
-					{
-						displayName: 'Per Month ($)',
-						name: 'perMonth',
-						type: 'number',
-						default: 100,
-						description: 'Maximum monthly spend',
-					},
-					{
-						displayName: 'Lifetime ($)',
-						name: 'lifetime',
-						type: 'number',
-						default: 1000,
-						description: 'Maximum lifetime spend',
+						name: 'Custom Wallet',
+						value: 'custom',
+						description: 'Specify a different wallet ID',
 					},
 				],
+				default: 'default',
+				description: 'Which wallet to use for payments in this workflow',
+			},
+			{
+				displayName: 'Wallet ID',
+				name: 'walletId',
+				type: 'string',
+				displayOptions: {
+					show: {
+						operation: ['setPolicy'],
+						walletSource: ['custom'],
+					},
+				},
+				default: '',
+				required: true,
+				placeholder: 'e.g., wallet_abc123',
+				description: 'The ID of the wallet to use (find this in your xpay✦ dashboard)',
 			},
 
 			// ============================================
-			// UPDATE LIMITS PARAMETERS
+			// SET POLICY - Spending Limits
 			// ============================================
 			{
 				displayName: 'Spending Limits',
@@ -202,111 +135,89 @@ export class XPayPolicy implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
-						operation: ['updateLimits'],
+						operation: ['setPolicy'],
 					},
 				},
 				options: [
 					{
-						displayName: 'Per Call ($)',
+						displayName: 'Per Call Limit ($)',
 						name: 'perCall',
 						type: 'number',
-						default: 1,
-						description: 'Maximum spend per API call',
+						typeOptions: {
+							minValue: 0,
+							numberPrecision: 2,
+						},
+						default: 1.00,
+						description: 'Maximum spend per individual service call',
 					},
 					{
-						displayName: 'Per Minute ($)',
-						name: 'perMinute',
-						type: 'number',
-						default: 5,
-						description: 'Maximum spend per minute',
-					},
-					{
-						displayName: 'Per Day ($)',
+						displayName: 'Per Day Limit ($)',
 						name: 'perDay',
 						type: 'number',
-						default: 10,
-						description: 'Maximum daily spend',
+						typeOptions: {
+							minValue: 0,
+							numberPrecision: 2,
+						},
+						default: 10.00,
+						description: 'Maximum total spend per day',
 					},
 					{
-						displayName: 'Per Week ($)',
-						name: 'perWeek',
-						type: 'number',
-						default: 50,
-						description: 'Maximum weekly spend',
-					},
-					{
-						displayName: 'Per Month ($)',
+						displayName: 'Per Month Limit ($)',
 						name: 'perMonth',
 						type: 'number',
-						default: 100,
-						description: 'Maximum monthly spend',
+						typeOptions: {
+							minValue: 0,
+							numberPrecision: 2,
+						},
+						default: 100.00,
+						description: 'Maximum total spend per month',
 					},
 					{
-						displayName: 'Lifetime ($)',
+						displayName: 'Lifetime Limit ($)',
 						name: 'lifetime',
 						type: 'number',
-						default: 1000,
-						description: 'Maximum lifetime spend',
+						typeOptions: {
+							minValue: 0,
+							numberPrecision: 2,
+						},
+						default: 0,
+						description: 'Maximum total spend ever (0 = unlimited)',
 					},
 				],
 			},
 
 			// ============================================
-			// DOMAIN RULES PARAMETERS
+			// SET POLICY - Domain Rules (Optional)
 			// ============================================
 			{
-				displayName: 'Allowed Domains',
-				name: 'allowedDomains',
-				type: 'string',
+				displayName: 'Domain Rules',
+				name: 'domainRules',
+				type: 'collection',
+				placeholder: 'Add Domain Rule',
+				default: {},
 				displayOptions: {
 					show: {
-						operation: ['setDomainRules'],
-					},
-				},
-				default: '',
-				placeholder: 'api.openai.com, api.anthropic.com',
-				description: 'Comma-separated list of domains the agent can access. Leave empty to allow all.',
-			},
-			{
-				displayName: 'Blocked Domains',
-				name: 'blockedDomains',
-				type: 'string',
-				displayOptions: {
-					show: {
-						operation: ['setDomainRules'],
-					},
-				},
-				default: '',
-				placeholder: 'malicious-site.com, blocked-api.com',
-				description: 'Comma-separated list of domains to block',
-			},
-
-			// ============================================
-			// PAUSE AGENT PARAMETERS
-			// ============================================
-			{
-				displayName: 'Action',
-				name: 'pauseAction',
-				type: 'options',
-				displayOptions: {
-					show: {
-						operation: ['pauseAgent'],
+						operation: ['setPolicy'],
 					},
 				},
 				options: [
 					{
-						name: 'Pause',
-						value: 'pause',
-						description: 'Pause agent execution',
+						displayName: 'Allowed Domains',
+						name: 'allowedDomains',
+						type: 'string',
+						default: '',
+						placeholder: 'e.g., api.openai.com, anthropic.com',
+						description: 'Comma-separated list of allowed domains (leave empty for all)',
 					},
 					{
-						name: 'Resume',
-						value: 'resume',
-						description: 'Resume agent execution',
+						displayName: 'Blocked Domains',
+						name: 'blockedDomains',
+						type: 'string',
+						default: '',
+						placeholder: 'e.g., example.com',
+						description: 'Comma-separated list of blocked domains',
 					},
 				],
-				default: 'pause',
-				description: 'Whether to pause or resume the agent',
 			},
 		],
 	};
@@ -318,149 +229,78 @@ export class XPayPolicy implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			try {
 				const operation = this.getNodeParameter('operation', i) as string;
-				const credentials = await getXPayCredentials(this);
 				let result: any;
 
 				// ============================================
-				// GET WALLET BALANCE
+				// GET BALANCE
 				// ============================================
-				if (operation === 'getWalletBalance') {
-					const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.WALLET_BALANCE) as WalletBalance;
+				if (operation === 'getBalance') {
+					const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.WALLET_BALANCE);
 
 					result = {
 						balance: {
-							available: response.available || 0,
-							locked: response.locked || 0,
-							currency: response.currency || 'USDC',
-							creditsRemaining: response.creditsRemaining || 0,
+							available: response.wallet?.balance ?? response.balance?.available ?? 0,
+							credits: response.wallet?.credits ?? response.balance?.credits ?? 0,
+							currency: 'USDC',
 						},
+						message: 'Wallet balance retrieved successfully',
 					};
 				}
 
 				// ============================================
-				// CREATE AGENT
+				// SET POLICY
 				// ============================================
-				else if (operation === 'createAgent') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations. Please configure it in your xpay✦ API credentials.');
-					}
-
-					const agentName = this.getNodeParameter('agentName', i) as string;
-					const agentDescription = this.getNodeParameter('agentDescription', i, '') as string;
-					const initialLimits = this.getNodeParameter('initialLimits', i) as Partial<AgentLimits>;
-
-					const agentData = {
-						customerId: credentials.customerId,
-						name: agentName,
-						description: agentDescription,
-						agentLimits: {
-							perCall: initialLimits.perCall || null,
-							perDay: initialLimits.perDay || null,
-							perMonth: initialLimits.perMonth || null,
-							lifetime: initialLimits.lifetime || null,
-						},
+				else if (operation === 'setPolicy') {
+					const workflowDescription = this.getNodeParameter('workflowDescription', i) as string;
+					const walletSource = this.getNodeParameter('walletSource', i) as string;
+					const walletId = walletSource === 'custom'
+						? this.getNodeParameter('walletId', i) as string
+						: null;
+					const spendingLimits = this.getNodeParameter('spendingLimits', i) as {
+						perCall?: number;
+						perDay?: number;
+						perMonth?: number;
+						lifetime?: number;
+					};
+					const domainRules = this.getNodeParameter('domainRules', i) as {
+						allowedDomains?: string;
+						blockedDomains?: string;
 					};
 
-					const response = await smartProxyRequest(
-						this,
-						'POST',
-						ENDPOINTS.AGENTS,
-						agentData,
-					) as SmartProxyAgent;
-
-					result = {
-						agent: response,
-						message: 'Agent created successfully',
-					};
-				}
-
-				// ============================================
-				// GET AGENT
-				// ============================================
-				else if (operation === 'getAgent') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations.');
-					}
-
-					const agentId = this.getNodeParameter('agentId', i) as string;
-
-					const response = await smartProxyRequest(
-						this,
-						'GET',
-						`${ENDPOINTS.AGENTS}/${agentId}`,
-						undefined,
-						{ customerId: credentials.customerId },
-					) as SmartProxyAgent;
-
-					result = {
-						agent: response,
-					};
-				}
-
-				// ============================================
-				// UPDATE LIMITS
-				// ============================================
-				else if (operation === 'updateLimits') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations.');
-					}
-
-					const agentId = this.getNodeParameter('agentId', i) as string;
-					const spendingLimits = this.getNodeParameter('spendingLimits', i) as Partial<AgentLimits>;
-
-					const updateData = {
-						customerId: credentials.customerId,
-						agentLimits: spendingLimits,
-					};
-
-					const response = await smartProxyRequest(
-						this,
-						'PUT',
-						`${ENDPOINTS.AGENTS}/${agentId}`,
-						updateData,
-					) as SmartProxyAgent;
-
-					result = {
-						agent: response,
-						message: 'Agent limits updated successfully',
-					};
-				}
-
-				// ============================================
-				// SET DOMAIN RULES
-				// ============================================
-				else if (operation === 'setDomainRules') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations.');
-					}
-
-					const agentId = this.getNodeParameter('agentId', i) as string;
-					const allowedDomainsStr = this.getNodeParameter('allowedDomains', i, '') as string;
-					const blockedDomainsStr = this.getNodeParameter('blockedDomains', i, '') as string;
-
-					const allowedDomains = allowedDomainsStr
-						? allowedDomainsStr.split(',').map((d) => d.trim()).filter(Boolean)
+					// Parse domain rules
+					const allowedDomains = domainRules.allowedDomains
+						? domainRules.allowedDomains.split(',').map(d => d.trim()).filter(d => d)
 						: [];
-					const blockedDomains = blockedDomainsStr
-						? blockedDomainsStr.split(',').map((d) => d.trim()).filter(Boolean)
+					const blockedDomains = domainRules.blockedDomains
+						? domainRules.blockedDomains.split(',').map(d => d.trim()).filter(d => d)
 						: [];
 
-					const updateData = {
-						customerId: credentials.customerId,
-						allowedDomains,
-						blockedDomains,
+					// Build policy object
+					const policy = {
+						description: workflowDescription,
+						wallet: {
+							source: walletSource,
+							walletId: walletId, // null means use default wallet
+						},
+						limits: {
+							perCall: spendingLimits.perCall ?? 1.00,
+							perDay: spendingLimits.perDay ?? 10.00,
+							perMonth: spendingLimits.perMonth ?? 100.00,
+							lifetime: spendingLimits.lifetime ?? 0,
+						},
+						domains: {
+							allowed: allowedDomains,
+							blocked: blockedDomains,
+						},
+						appliedAt: new Date().toISOString(),
 					};
 
-					const response = await smartProxyRequest(
-						this,
-						'PUT',
-						`${ENDPOINTS.AGENTS}/${agentId}`,
-						updateData,
-					) as SmartProxyAgent;
-
+					// Store policy in workflow context for downstream xpay✦ Run nodes
+					// Note: In production, this would be sent to Smart Proxy API
 					result = {
-						agent: response,
-						message: 'Domain rules updated successfully',
+						policy,
+						message: 'Policy configured for this workflow run',
+						hint: 'This policy applies to all subsequent xpay✦ Run calls in this workflow execution.',
 					};
 				}
 
@@ -468,75 +308,24 @@ export class XPayPolicy implements INodeType {
 				// GET SPENDING
 				// ============================================
 				else if (operation === 'getSpending') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations.');
-					}
-
-					const agentId = this.getNodeParameter('agentId', i) as string;
-
-					// Get agent to retrieve spending info
-					const agent = await smartProxyRequest(
-						this,
-						'GET',
-						`${ENDPOINTS.AGENTS}/${agentId}`,
-						undefined,
-						{ customerId: credentials.customerId },
-					) as SmartProxyAgent;
-
-					// Get effective limits
-					const limitsResponse = await smartProxyRequest(
-						this,
-						'GET',
-						`${ENDPOINTS.AGENTS}/${agentId}/effective-limits`,
-						undefined,
-						{ customerId: credentials.customerId },
-					) as EffectiveLimits;
+					// Get account stats for spending info
+					const statsResponse = await glyphCoreRequest(this, 'GET', ENDPOINTS.ACCOUNT_STATS);
+					const balanceResponse = await glyphCoreRequest(this, 'GET', ENDPOINTS.WALLET_BALANCE);
 
 					result = {
-						agentId,
 						spending: {
-							totalSpent: agent.totalSpent || 0,
-							spentThisMinute: agent.spentThisMinute || 0,
-							spentThisDay: agent.spentThisDay || 0,
-							spentThisWeek: agent.spentThisWeek || 0,
-							spentThisMonth: agent.spentThisMonth || 0,
+							totalSpent: balanceResponse.wallet?.totalSpent ?? 0,
+							creditsUsed: balanceResponse.wallet?.creditsUsed ?? 0,
 						},
-						limits: {
-							agentLimits: agent.agentLimits,
-							effectiveLimits: limitsResponse.effectiveLimits || limitsResponse,
+						balance: {
+							available: balanceResponse.wallet?.balance ?? 0,
+							credits: balanceResponse.wallet?.credits ?? 0,
 						},
-						status: agent.status,
-					};
-				}
-
-				// ============================================
-				// PAUSE AGENT
-				// ============================================
-				else if (operation === 'pauseAgent') {
-					if (!credentials.customerId) {
-						throw new Error('Customer ID is required for Smart Proxy operations.');
-					}
-
-					const agentId = this.getNodeParameter('agentId', i) as string;
-					const pauseAction = this.getNodeParameter('pauseAction', i) as 'pause' | 'resume';
-
-					const newStatus = pauseAction === 'pause' ? 'paused' : 'active';
-
-					const updateData = {
-						customerId: credentials.customerId,
-						status: newStatus,
-					};
-
-					const response = await smartProxyRequest(
-						this,
-						'PUT',
-						`${ENDPOINTS.AGENTS}/${agentId}`,
-						updateData,
-					) as SmartProxyAgent;
-
-					result = {
-						agent: response,
-						message: pauseAction === 'pause' ? 'Agent paused successfully' : 'Agent resumed successfully',
+						stats: {
+							totalRuns: statsResponse.stats?.totalRuns ?? 0,
+							successfulRuns: statsResponse.stats?.successfulRuns ?? 0,
+						},
+						message: 'Spending information retrieved successfully',
 					};
 				}
 

@@ -9,8 +9,8 @@ import type {
 } from 'n8n-workflow';
 
 import { glyphCoreRequest, handleApiError } from '../../shared/api';
-import { ENDPOINTS, COMMON_TAG_OPTIONS, GLYPH_TYPE_OPTIONS } from '../../shared/constants';
-import type { Glyph, ModelCatalogEntry, CollectionTheme, CostEstimate } from '../../shared/types';
+import { ENDPOINTS, SERVICE_TYPE_OPTIONS } from '../../shared/constants';
+import type { ModelCatalogEntry, CostEstimate } from '../../shared/types';
 
 export class XPayDiscover implements INodeType {
 	description: INodeTypeDescription = {
@@ -19,8 +19,8 @@ export class XPayDiscover implements INodeType {
 		icon: 'file:xpay-discover.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + ($parameter["resource"] || "glyph")}}',
-		description: 'Search and discover glyphs, models, and collections from the Glyphrun marketplace',
+		subtitle: '={{$parameter["operation"] + ": " + ($parameter["resource"] || "service")}}',
+		description: 'Search and discover services (agents, tools, prompts), models, and collections from the xpay✦ marketplace',
 		defaults: {
 			name: 'xpay✦ Discover',
 		},
@@ -41,9 +41,9 @@ export class XPayDiscover implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Glyph',
-						value: 'glyph',
-						description: 'Search and retrieve glyphs (agents, tools, prompts)',
+						name: 'Service',
+						value: 'service',
+						description: 'Search and retrieve services (agents, tools, prompts)',
 					},
 					{
 						name: 'Model',
@@ -53,14 +53,14 @@ export class XPayDiscover implements INodeType {
 					{
 						name: 'Collection',
 						value: 'collection',
-						description: 'Browse themed collections of glyphs',
+						description: 'Browse themed collections of services',
 					},
 				],
-				default: 'glyph',
+				default: 'service',
 			},
 
 			// ============================================
-			// GLYPH OPERATIONS
+			// SERVICE OPERATIONS
 			// ============================================
 			{
 				displayName: 'Operation',
@@ -69,33 +69,33 @@ export class XPayDiscover implements INodeType {
 				noDataExpression: true,
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 					},
 				},
 				options: [
 					{
 						name: 'Search',
 						value: 'search',
-						description: 'Search glyphs by keyword or intent',
-						action: 'Search glyphs',
+						description: 'Search services by keyword',
+						action: 'Search services',
 					},
 					{
 						name: 'Get',
 						value: 'get',
-						description: 'Get a specific glyph by slug or ID',
-						action: 'Get glyph',
+						description: 'Get a specific service by slug or ID',
+						action: 'Get service',
 					},
 					{
 						name: 'List by Tags',
 						value: 'listByTags',
-						description: 'List glyphs filtered by tags (e.g., healthcare, sdr, research)',
-						action: 'List glyphs by tags',
+						description: 'List services filtered by tags (e.g., healthcare, sdr, research)',
+						action: 'List services by tags',
 					},
 					{
 						name: 'List by Type',
 						value: 'listByType',
-						description: 'List glyphs filtered by type',
-						action: 'List glyphs by type',
+						description: 'List services filtered by type',
+						action: 'List services by type',
 					},
 				],
 				default: 'search',
@@ -108,30 +108,30 @@ export class XPayDiscover implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 						operation: ['search'],
 					},
 				},
 				default: '',
-				placeholder: 'e.g., market analysis, token audit',
-				description: 'Keywords to search for in glyph names and descriptions',
+				placeholder: 'e.g., account research, lead scoring',
+				description: 'Keywords to search for in service names and descriptions',
 			},
 
-			// Glyph slug/ID
+			// Service slug/ID
 			{
-				displayName: 'Glyph Slug or ID',
-				name: 'glyphSlug',
+				displayName: 'Service Slug or ID',
+				name: 'serviceSlug',
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 						operation: ['get'],
 					},
 				},
 				default: '',
 				required: true,
 				placeholder: 'e.g., account-intel',
-				description: 'The unique slug or ID of the glyph to retrieve',
+				description: 'The unique slug or ID of the service to retrieve',
 			},
 
 			// Tags filter
@@ -141,7 +141,7 @@ export class XPayDiscover implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 						operation: ['listByTags'],
 					},
 				},
@@ -154,20 +154,20 @@ export class XPayDiscover implements INodeType {
 			// Type filter
 			{
 				displayName: 'Type',
-				name: 'glyphType',
+				name: 'serviceType',
 				type: 'options',
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 						operation: ['listByType'],
 					},
 				},
-				options: GLYPH_TYPE_OPTIONS,
-				default: 'prompt',
-				description: 'Filter glyphs by type',
+				options: SERVICE_TYPE_OPTIONS,
+				default: 'agent',
+				description: 'Filter services by type',
 			},
 
-			// Glyph filters (additional)
+			// Service filters (additional)
 			{
 				displayName: 'Filters',
 				name: 'filters',
@@ -176,7 +176,7 @@ export class XPayDiscover implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
-						resource: ['glyph'],
+						resource: ['service'],
 						operation: ['search', 'listByTags', 'listByType'],
 					},
 				},
@@ -186,21 +186,21 @@ export class XPayDiscover implements INodeType {
 						name: 'verified',
 						type: 'boolean',
 						default: false,
-						description: 'Whether to only return verified glyphs',
+						description: 'Whether to only return verified services',
 					},
 					{
 						displayName: 'Featured Only',
 						name: 'featured',
 						type: 'boolean',
 						default: false,
-						description: 'Whether to only return featured glyphs',
+						description: 'Whether to only return featured services',
 					},
 					{
 						displayName: 'Trending Only',
 						name: 'trending',
 						type: 'boolean',
 						default: false,
-						description: 'Whether to only return trending glyphs',
+						description: 'Whether to only return trending services',
 					},
 					{
 						displayName: 'Limit',
@@ -370,7 +370,7 @@ export class XPayDiscover implements INodeType {
 					{
 						name: 'Get Collection',
 						value: 'getCollection',
-						description: 'Get a specific collection with its glyphs',
+						description: 'Get a specific collection with its services',
 						action: 'Get collection',
 					},
 				],
@@ -390,7 +390,7 @@ export class XPayDiscover implements INodeType {
 				},
 				default: '',
 				required: true,
-				placeholder: 'e.g., vc-deal-analysis',
+				placeholder: 'e.g., sales-tools',
 				description: 'The unique slug of the collection to retrieve',
 			},
 
@@ -457,9 +457,9 @@ export class XPayDiscover implements INodeType {
 				let result: any;
 
 				// ============================================
-				// GLYPH OPERATIONS
+				// SERVICE OPERATIONS (internally uses glyph API)
 				// ============================================
-				if (resource === 'glyph') {
+				if (resource === 'service') {
 					if (operation === 'search') {
 						const searchQuery = this.getNodeParameter('searchQuery', i) as string;
 						const filters = this.getNodeParameter('filters', i) as {
@@ -479,16 +479,27 @@ export class XPayDiscover implements INodeType {
 						if (filters.offset) query.offset = filters.offset;
 
 						const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.GLYPHS, undefined, query);
+						// Map glyph response to service terminology
+						const services = (response.glyphs || response || []).map((g: any) => ({
+							...g,
+							serviceId: g.id,
+							serviceSlug: g.slug,
+						}));
 						result = {
-							glyphs: response.glyphs || response || [],
+							services,
 							total: response.total,
 							query: searchQuery,
 						};
 					} else if (operation === 'get') {
-						const glyphSlug = this.getNodeParameter('glyphSlug', i) as string;
-						const response = await glyphCoreRequest(this, 'GET', `${ENDPOINTS.GLYPH}/${glyphSlug}`);
+						const serviceSlug = this.getNodeParameter('serviceSlug', i) as string;
+						const response = await glyphCoreRequest(this, 'GET', `${ENDPOINTS.GLYPH}/${serviceSlug}`);
+						const glyph = response.glyph || response;
 						result = {
-							glyph: response.glyph || response,
+							service: {
+								...glyph,
+								serviceId: glyph.id,
+								serviceSlug: glyph.slug,
+							},
 						};
 					} else if (operation === 'listByTags') {
 						const tags = this.getNodeParameter('tags', i) as string;
@@ -500,7 +511,6 @@ export class XPayDiscover implements INodeType {
 							offset?: number;
 						};
 
-						// Parse comma-separated tags and trim whitespace
 						const tagList = tags.split(',').map((t) => t.trim()).filter((t) => t);
 						const query: Record<string, string | number | boolean> = { tags: tagList.join(',') };
 						if (filters.verified) query.verified = true;
@@ -510,13 +520,18 @@ export class XPayDiscover implements INodeType {
 						if (filters.offset) query.offset = filters.offset;
 
 						const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.GLYPHS, undefined, query);
+						const services = (response.glyphs || response || []).map((g: any) => ({
+							...g,
+							serviceId: g.id,
+							serviceSlug: g.slug,
+						}));
 						result = {
-							glyphs: response.glyphs || response || [],
+							services,
 							total: response.total,
 							tags: tagList,
 						};
 					} else if (operation === 'listByType') {
-						const glyphType = this.getNodeParameter('glyphType', i) as string;
+						const serviceType = this.getNodeParameter('serviceType', i) as string;
 						const filters = this.getNodeParameter('filters', i) as {
 							verified?: boolean;
 							featured?: boolean;
@@ -525,7 +540,7 @@ export class XPayDiscover implements INodeType {
 							offset?: number;
 						};
 
-						const query: Record<string, string | number | boolean> = { type: glyphType };
+						const query: Record<string, string | number | boolean> = { type: serviceType };
 						if (filters.verified) query.verified = true;
 						if (filters.featured) query.featured = true;
 						if (filters.trending) query.trending = true;
@@ -533,10 +548,15 @@ export class XPayDiscover implements INodeType {
 						if (filters.offset) query.offset = filters.offset;
 
 						const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.GLYPHS, undefined, query);
+						const services = (response.glyphs || response || []).map((g: any) => ({
+							...g,
+							serviceId: g.id,
+							serviceSlug: g.slug,
+						}));
 						result = {
-							glyphs: response.glyphs || response || [],
+							services,
 							total: response.total,
-							type: glyphType,
+							type: serviceType,
 						};
 					}
 				}
@@ -605,9 +625,15 @@ export class XPayDiscover implements INodeType {
 							'GET',
 							`${ENDPOINTS.COLLECTION}/${collectionSlug}`,
 						);
+						// Map glyphs to services in collection response
+						const services = (response.glyphs || []).map((g: any) => ({
+							...g,
+							serviceId: g.id,
+							serviceSlug: g.slug,
+						}));
 						result = {
 							collection: response.collection || response,
-							glyphs: response.glyphs || [],
+							services,
 						};
 					}
 				}

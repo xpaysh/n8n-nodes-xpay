@@ -47,6 +47,8 @@ export const ENDPOINTS = {
 	RUN_STATUS: '/run/status', // + /{runId}
 
 	// Smart Proxy
+	PROXY: '/proxy',
+	POLICY_SESSION: '/policy/session',
 	AGENTS: '/agents',
 	CUSTOMERS: '/customers',
 	LIMITS: '/limits',
@@ -93,17 +95,16 @@ export const COMMON_TAG_OPTIONS = [
 	{ name: 'Data Processing', value: 'data' },
 ];
 
-// Glyph type options
-export const GLYPH_TYPE_OPTIONS = [
+// Service type options
+export const SERVICE_TYPE_OPTIONS = [
 	{ name: 'Agent', value: 'agent' },
 	{ name: 'Tool', value: 'tool' },
 	{ name: 'Prompt', value: 'prompt' },
-	{ name: 'Model', value: 'model' },
 ];
 
 // Run status descriptions
 export const RUN_STATUS_DESCRIPTIONS: Record<string, string> = {
-	processing: 'The glyph is currently executing',
+	processing: 'The service is currently executing',
 	success: 'Execution completed successfully',
 	completed: 'Execution completed successfully',
 	failed: 'Execution failed with an error',
