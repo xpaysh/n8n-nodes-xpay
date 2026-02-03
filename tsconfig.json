@@ -18,7 +18,8 @@
   "include": [
     "index.ts",
     "nodes/**/*.ts",
-    "credentials/**/*.ts"
+    "credentials/**/*.ts",
+    "shared/**/*.ts"
   ],
   "exclude": [
     "node_modules",

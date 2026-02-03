@@ -20,7 +20,8 @@ export class XPayApi implements ICredentialType {
 			},
 			default: '',
 			required: true,
-			description: 'Your xpay✦ API secret key',
+			placeholder: 'xpay_sk_...',
+			description: 'Your xpay✦ API secret key (format: xpay_sk_xxx for sandbox, xpay_pk_xxx for production)',
 			hint: 'Get your keys at app.xpay.sh/settings/api-keys',
 		},
 		{
@@ -42,6 +43,26 @@ export class XPayApi implements ICredentialType {
 			default: 'sandbox',
 			description: 'Choose Sandbox for testing, Production for live payments',
 		},
+		{
+			displayName: 'Enable Smart Proxy Features',
+			name: 'smartProxyEnabled',
+			type: 'boolean',
+			default: false,
+			description: 'Whether to enable Smart Proxy policy features (agent management, spending limits)',
+		},
+		{
+			displayName: 'Customer ID',
+			name: 'customerId',
+			type: 'string',
+			default: '',
+			description: 'Your Smart Proxy Customer ID (required for policy operations)',
+			hint: 'Find this at app.xpay.sh/smart-proxy/settings',
+			displayOptions: {
+				show: {
+					smartProxyEnabled: [true],
+				},
+			},
+		},
 	];
 
 	authenticate: IAuthenticateGeneric = {
@@ -55,9 +76,9 @@ export class XPayApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			// TODO: Update to api.xpay.sh once DNS is configured
-			baseURL: '={{$credentials.environment === "production" ? "https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev" : "https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev"}}',
-			url: '/v1/health',
+			// Use Glyphrun Core health endpoint for credential validation
+			baseURL: '={{$credentials.environment === "production" ? "https://7qzahhyw77.execute-api.us-east-1.amazonaws.com/dev" : "https://7qzahhyw77.execute-api.us-east-1.amazonaws.com/dev"}}',
+			url: '/health',
 			method: 'GET',
 		},
 	};

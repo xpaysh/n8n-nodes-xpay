@@ -1,7 +1,7 @@
 {
   "name": "@xpaysh/n8n-nodes-xpay",
-  "version": "0.1.5",
-  "description": "Monetize your n8n workflows with xpay✦ payments. Create pay-to-run workflows in 60 seconds.",
+  "version": "0.2.0",
+  "description": "AI agent marketplace and pay-per-run workflows with xpay✦. Discover glyphs, set spending policies, and execute with automatic payments.",
   "keywords": [
     "n8n-community-node-package",
     "n8n",
@@ -11,7 +11,11 @@
     "paywall",
     "monetization",
     "pay-to-run",
-    "xpay"
+    "xpay",
+    "ai-agents",
+    "glyphrun",
+    "a2a",
+    "smart-proxy"
   ],
   "license": "MIT",
   "author": {
@@ -29,9 +33,9 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && npm run copy-icons",
-    "copy-icons": "cp nodes/XPayTrigger/xpay.svg dist/nodes/XPayTrigger/",
-    "lint": "eslint nodes credentials --ext .ts",
-    "lint:fix": "eslint nodes credentials --ext .ts --fix",
+    "copy-icons": "cp nodes/XPayTrigger/xpay.svg dist/nodes/XPayTrigger/ && cp nodes/XPayDiscover/xpay-discover.svg dist/nodes/XPayDiscover/ && cp nodes/XPayRun/xpay-run.svg dist/nodes/XPayRun/ && cp nodes/XPayPolicy/xpay-policy.svg dist/nodes/XPayPolicy/",
+    "lint": "eslint nodes credentials shared --ext .ts",
+    "lint:fix": "eslint nodes credentials shared --ext .ts --fix",
     "prepublishOnly": "npm run build"
   },
   "files": [
@@ -43,7 +47,10 @@
       "dist/credentials/XPayApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/XPayTrigger/XPayTrigger.node.js"
+      "dist/nodes/XPayTrigger/XPayTrigger.node.js",
+      "dist/nodes/XPayDiscover/XPayDiscover.node.js",
+      "dist/nodes/XPayRun/XPayRun.node.js",
+      "dist/nodes/XPayPolicy/XPayPolicy.node.js"
     ]
   },
   "devDependencies": {
