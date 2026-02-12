@@ -270,3 +270,26 @@ export interface CostEstimate {
 	total: number;
 	currency: string;
 }
+
+// ============================================
+// CHARGE-PER-USE PRICING TYPES
+// ============================================
+
+export type ChargePricingModel = 'flat' | 'token-based' | 'dynamic' | 'time-based' | 'per-unit' | 'tiered';
+
+export interface ChargePricingConfig {
+	model: ChargePricingModel;
+	flatPrice?: number;
+	pricePerInputToken?: number;
+	pricePerOutputToken?: number;
+	estimatedTokens?: number;
+	basePrice?: number;
+	complexityRange?: [number, number];
+	pricingDescription?: string;
+	pricePerMinute?: number;
+	minimumMinutes?: number;
+	estimatedMinutes?: number;
+	pricePerUnit?: number;
+	unitLabel?: string;
+	estimatedUnits?: number;
+}

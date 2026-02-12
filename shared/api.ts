@@ -3,7 +3,10 @@
  * Provides helper functions for making authenticated API requests
  */
 
-import type { IExecuteFunctions, ILoadOptionsFunctions, IHttpRequestOptions } from 'n8n-workflow';
+import type { IExecuteFunctions, ILoadOptionsFunctions, ISupplyDataFunctions, IHttpRequestOptions } from 'n8n-workflow';
+
+// Type alias for all function contexts that can make API requests
+type ApiContext = IExecuteFunctions | ILoadOptionsFunctions | ISupplyDataFunctions;
 import {
 	type Environment,
 	GLYPH_CORE_URLS,
@@ -22,7 +25,7 @@ export interface XPayCredentials {
  * Get credentials from the node context
  */
 export async function getXPayCredentials(
-	context: IExecuteFunctions | ILoadOptionsFunctions,
+	context: ApiContext,
 ): Promise<XPayCredentials> {
 	const credentials = await context.getCredentials('xPayApi');
 	return {
@@ -58,7 +61,7 @@ export function getSmartProxyBaseUrl(environment: Environment): string {
  * Make an authenticated request to Glyphrun Core API
  */
 export async function glyphCoreRequest(
-	context: IExecuteFunctions | ILoadOptionsFunctions,
+	context: ApiContext,
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
 	endpoint: string,
 	body?: object,
@@ -91,7 +94,7 @@ export async function glyphCoreRequest(
  * Make an authenticated request to Glyphrun Router API
  */
 export async function glyphRouterRequest(
-	context: IExecuteFunctions | ILoadOptionsFunctions,
+	context: ApiContext,
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
 	endpoint: string,
 	body?: object,
@@ -124,7 +127,7 @@ export async function glyphRouterRequest(
  * Make an authenticated request to Smart Proxy API
  */
 export async function smartProxyRequest(
-	context: IExecuteFunctions | ILoadOptionsFunctions,
+	context: ApiContext,
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
 	endpoint: string,
 	body?: object,

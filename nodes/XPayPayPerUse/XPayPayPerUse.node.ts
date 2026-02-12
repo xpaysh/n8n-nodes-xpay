@@ -8,21 +8,21 @@ import type {
 	NodeConnectionType,
 } from 'n8n-workflow';
 
-import { glyphCoreRequest, handleApiError } from '../../shared/api';
-import { ENDPOINTS, SERVICE_TYPE_OPTIONS } from '../../shared/constants';
-import type { ModelCatalogEntry, CostEstimate } from '../../shared/types';
+import { glyphCoreRequest, glyphRouterRequest, handleApiError, sleep, parseInputsCollection } from '../../shared/api';
+import { ENDPOINTS, DEFAULTS, MODEL_OPTIONS, SERVICE_TYPE_OPTIONS } from '../../shared/constants';
+import type { ModelCatalogEntry, CostEstimate, RunResult, AsyncRunResult, RunStatusResult } from '../../shared/types';
 
-export class XPayDiscover implements INodeType {
+export class XPayPayPerUse implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'xpay✦ Discover',
-		name: 'xPayDiscover',
-		icon: 'file:xpay-discover.svg',
+		displayName: 'xpay✦ pay-per-use',
+		name: 'xPayPayPerUse',
+		icon: 'file:xpay-pay-per-use.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["operation"] + ": " + ($parameter["resource"] || "service")}}',
-		description: 'Search and discover services (agents, tools, prompts), models, and collections from the xpay✦ marketplace',
+		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
+		description: 'Discover and execute marketplace services with automatic payment handling',
 		defaults: {
-			name: 'xpay✦ Discover',
+			name: 'xpay✦ pay-per-use',
 		},
 		inputs: ['main' as NodeConnectionType],
 		outputs: ['main' as NodeConnectionType],
@@ -41,26 +41,26 @@ export class XPayDiscover implements INodeType {
 				noDataExpression: true,
 				options: [
 					{
-						name: 'Service',
-						value: 'service',
+						name: 'Discover',
+						value: 'discover',
 						description: 'Search and retrieve services (agents, tools, prompts)',
+					},
+					{
+						name: 'Run',
+						value: 'run',
+						description: 'Execute services with automatic payment handling',
 					},
 					{
 						name: 'Model',
 						value: 'model',
 						description: 'List available LLM models and estimate costs',
 					},
-					{
-						name: 'Collection',
-						value: 'collection',
-						description: 'Browse themed collections of services',
-					},
 				],
-				default: 'service',
+				default: 'discover',
 			},
 
 			// ============================================
-			// SERVICE OPERATIONS
+			// DISCOVER OPERATIONS
 			// ============================================
 			{
 				displayName: 'Operation',
@@ -69,7 +69,7 @@ export class XPayDiscover implements INodeType {
 				noDataExpression: true,
 				displayOptions: {
 					show: {
-						resource: ['service'],
+						resource: ['discover'],
 					},
 				},
 				options: [
@@ -80,22 +80,22 @@ export class XPayDiscover implements INodeType {
 						action: 'Search services',
 					},
 					{
-						name: 'Get',
-						value: 'get',
+						name: 'Get Service',
+						value: 'getService',
 						description: 'Get a specific service by slug or ID',
 						action: 'Get service',
 					},
 					{
-						name: 'List by Tags',
-						value: 'listByTags',
+						name: 'Browse by Tags',
+						value: 'browseByTags',
 						description: 'List services filtered by tags (e.g., healthcare, sdr, research)',
-						action: 'List services by tags',
+						action: 'Browse services by tags',
 					},
 					{
-						name: 'List by Type',
-						value: 'listByType',
+						name: 'Browse by Type',
+						value: 'browseByType',
 						description: 'List services filtered by type',
-						action: 'List services by type',
+						action: 'Browse services by type',
 					},
 				],
 				default: 'search',
@@ -108,7 +108,7 @@ export class XPayDiscover implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['service'],
+						resource: ['discover'],
 						operation: ['search'],
 					},
 				},
@@ -124,8 +124,8 @@ export class XPayDiscover implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['service'],
-						operation: ['get'],
+						resource: ['discover'],
+						operation: ['getService'],
 					},
 				},
 				default: '',
@@ -141,8 +141,8 @@ export class XPayDiscover implements INodeType {
 				type: 'string',
 				displayOptions: {
 					show: {
-						resource: ['service'],
-						operation: ['listByTags'],
+						resource: ['discover'],
+						operation: ['browseByTags'],
 					},
 				},
 				default: '',
@@ -158,8 +158,8 @@ export class XPayDiscover implements INodeType {
 				type: 'options',
 				displayOptions: {
 					show: {
-						resource: ['service'],
-						operation: ['listByType'],
+						resource: ['discover'],
+						operation: ['browseByType'],
 					},
 				},
 				options: SERVICE_TYPE_OPTIONS,
@@ -167,7 +167,7 @@ export class XPayDiscover implements INodeType {
 				description: 'Filter services by type',
 			},
 
-			// Service filters (additional)
+			// Discover filters
 			{
 				displayName: 'Filters',
 				name: 'filters',
@@ -176,8 +176,8 @@ export class XPayDiscover implements INodeType {
 				default: {},
 				displayOptions: {
 					show: {
-						resource: ['service'],
-						operation: ['search', 'listByTags', 'listByType'],
+						resource: ['discover'],
+						operation: ['search', 'browseByTags', 'browseByType'],
 					},
 				},
 				options: [
@@ -215,6 +215,199 @@ export class XPayDiscover implements INodeType {
 						type: 'number',
 						default: 0,
 						description: 'Number of results to skip (for pagination)',
+					},
+				],
+			},
+
+			// ============================================
+			// RUN OPERATIONS
+			// ============================================
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: {
+					show: {
+						resource: ['run'],
+					},
+				},
+				options: [
+					{
+						name: 'Run Sync',
+						value: 'runSync',
+						description: 'Execute a service and wait for the result',
+						action: 'Run sync',
+					},
+					{
+						name: 'Run Async',
+						value: 'runAsync',
+						description: 'Start async execution (returns immediately with run ID)',
+						action: 'Run async',
+					},
+					{
+						name: 'Get Run Status',
+						value: 'getRunStatus',
+						description: 'Poll execution status for an async run',
+						action: 'Get run status',
+					},
+				],
+				default: 'runSync',
+			},
+
+			// Run: Service Slug
+			{
+				displayName: 'Service Slug',
+				name: 'runServiceSlug',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runSync', 'runAsync'],
+					},
+				},
+				default: '',
+				required: true,
+				placeholder: 'e.g., account-intel',
+				description: 'The slug or ID of the service to execute. Use {{ $json.services[0].serviceSlug }} from a Discover operation.',
+			},
+			{
+				displayName: 'Model',
+				name: 'runModelId',
+				type: 'options',
+				typeOptions: {
+					loadOptionsMethod: 'getModels',
+				},
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runSync', 'runAsync'],
+					},
+				},
+				default: 'gpt-4o-mini',
+				required: true,
+				description: 'The LLM model to use for execution',
+			},
+			{
+				displayName: 'Inputs',
+				name: 'inputs',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runSync', 'runAsync'],
+					},
+				},
+				default: {},
+				placeholder: 'Add Input',
+				description: 'Input values for the service. Check the service schema for required fields.',
+				options: [
+					{
+						name: 'inputValues',
+						displayName: 'Input',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								default: '',
+								placeholder: 'e.g., url, company_name',
+								description: 'The input field name',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								placeholder: 'e.g., https://example.com',
+								description: 'The input value (supports expressions)',
+							},
+						],
+					},
+				],
+			},
+
+			// Async options
+			{
+				displayName: 'Wait for Completion',
+				name: 'waitForCompletion',
+				type: 'boolean',
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runAsync'],
+					},
+				},
+				default: true,
+				description: 'Whether to poll and wait for the async execution to complete',
+			},
+			{
+				displayName: 'Polling Timeout (seconds)',
+				name: 'pollingTimeout',
+				type: 'number',
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runAsync'],
+						waitForCompletion: [true],
+					},
+				},
+				default: 180,
+				description: 'Maximum time to wait for completion (in seconds)',
+			},
+
+			// Get Status: Run ID
+			{
+				displayName: 'Run ID',
+				name: 'runId',
+				type: 'string',
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['getRunStatus'],
+					},
+				},
+				default: '',
+				required: true,
+				placeholder: 'e.g., run_abc123',
+				description: 'The run ID from a previous async execution. Use {{ $json.runId }} from a previous Run operation.',
+			},
+
+			// Run: Advanced Options
+			{
+				displayName: 'Options',
+				name: 'runOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: {
+					show: {
+						resource: ['run'],
+						operation: ['runSync', 'runAsync'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Temperature',
+						name: 'temperature',
+						type: 'number',
+						typeOptions: {
+							minValue: 0,
+							maxValue: 2,
+							numberPrecision: 1,
+						},
+						default: 0.7,
+						description: 'Model temperature (0 = deterministic, 2 = creative)',
+					},
+					{
+						displayName: 'Max Tokens',
+						name: 'maxTokens',
+						type: 'number',
+						default: 4096,
+						description: 'Maximum tokens in the response',
 					},
 				],
 			},
@@ -305,7 +498,7 @@ export class XPayDiscover implements INodeType {
 			// Cost estimation parameters
 			{
 				displayName: 'Model',
-				name: 'modelId',
+				name: 'costModelId',
 				type: 'options',
 				typeOptions: {
 					loadOptionsMethod: 'getModels',
@@ -346,77 +539,6 @@ export class XPayDiscover implements INodeType {
 				default: 500,
 				description: 'Estimated number of output tokens',
 			},
-
-			// ============================================
-			// COLLECTION OPERATIONS
-			// ============================================
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: {
-					show: {
-						resource: ['collection'],
-					},
-				},
-				options: [
-					{
-						name: 'List Collections',
-						value: 'listCollections',
-						description: 'List all themed collections',
-						action: 'List collections',
-					},
-					{
-						name: 'Get Collection',
-						value: 'getCollection',
-						description: 'Get a specific collection with its services',
-						action: 'Get collection',
-					},
-				],
-				default: 'listCollections',
-			},
-
-			// Collection slug
-			{
-				displayName: 'Collection Slug',
-				name: 'collectionSlug',
-				type: 'string',
-				displayOptions: {
-					show: {
-						resource: ['collection'],
-						operation: ['getCollection'],
-					},
-				},
-				default: '',
-				required: true,
-				placeholder: 'e.g., sales-tools',
-				description: 'The unique slug of the collection to retrieve',
-			},
-
-			// Collection filters
-			{
-				displayName: 'Filters',
-				name: 'collectionFilters',
-				type: 'collection',
-				placeholder: 'Add Filter',
-				default: {},
-				displayOptions: {
-					show: {
-						resource: ['collection'],
-						operation: ['listCollections'],
-					},
-				},
-				options: [
-					{
-						displayName: 'Featured Only',
-						name: 'featured',
-						type: 'boolean',
-						default: false,
-						description: 'Whether to only return featured collections',
-					},
-				],
-			},
 		],
 	};
 
@@ -428,18 +550,12 @@ export class XPayDiscover implements INodeType {
 					const models = response.models || response || [];
 
 					return models.map((model: ModelCatalogEntry) => ({
-						name: `${model.displayName} (${model.provider})`,
+						name: `${model.displayName} (${model.tier})`,
 						value: model.modelId,
-						description: model.description || `${model.tier} tier`,
+						description: model.description || `${model.provider}`,
 					}));
 				} catch (error) {
-					// Return default models if API fails
-					return [
-						{ name: 'GPT-4o Mini', value: 'gpt-4o-mini' },
-						{ name: 'GPT-4o', value: 'gpt-4o' },
-						{ name: 'Claude 3.5 Sonnet', value: 'claude-3.5-sonnet' },
-						{ name: 'Claude 3.5 Haiku', value: 'claude-3.5-haiku' },
-					];
+					return MODEL_OPTIONS.map((m) => ({ ...m, description: '' }));
 				}
 			},
 		},
@@ -457,9 +573,9 @@ export class XPayDiscover implements INodeType {
 				let result: any;
 
 				// ============================================
-				// SERVICE OPERATIONS (internally uses glyph API)
+				// DISCOVER OPERATIONS
 				// ============================================
-				if (resource === 'service') {
+				if (resource === 'discover') {
 					if (operation === 'search') {
 						const searchQuery = this.getNodeParameter('searchQuery', i) as string;
 						const filters = this.getNodeParameter('filters', i) as {
@@ -479,7 +595,6 @@ export class XPayDiscover implements INodeType {
 						if (filters.offset) query.offset = filters.offset;
 
 						const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.GLYPHS, undefined, query);
-						// Map glyph response to service terminology
 						const services = (response.glyphs || response || []).map((g: any) => ({
 							...g,
 							serviceId: g.id,
@@ -490,7 +605,7 @@ export class XPayDiscover implements INodeType {
 							total: response.total,
 							query: searchQuery,
 						};
-					} else if (operation === 'get') {
+					} else if (operation === 'getService') {
 						const serviceSlug = this.getNodeParameter('serviceSlug', i) as string;
 						const response = await glyphCoreRequest(this, 'GET', `${ENDPOINTS.GLYPH}/${serviceSlug}`);
 						const glyph = response.glyph || response;
@@ -501,7 +616,7 @@ export class XPayDiscover implements INodeType {
 								serviceSlug: glyph.slug,
 							},
 						};
-					} else if (operation === 'listByTags') {
+					} else if (operation === 'browseByTags') {
 						const tags = this.getNodeParameter('tags', i) as string;
 						const filters = this.getNodeParameter('filters', i) as {
 							verified?: boolean;
@@ -530,7 +645,7 @@ export class XPayDiscover implements INodeType {
 							total: response.total,
 							tags: tagList,
 						};
-					} else if (operation === 'listByType') {
+					} else if (operation === 'browseByType') {
 						const serviceType = this.getNodeParameter('serviceType', i) as string;
 						const filters = this.getNodeParameter('filters', i) as {
 							verified?: boolean;
@@ -562,6 +677,169 @@ export class XPayDiscover implements INodeType {
 				}
 
 				// ============================================
+				// RUN OPERATIONS
+				// ============================================
+				else if (resource === 'run') {
+					if (operation === 'runSync') {
+						const serviceSlug = this.getNodeParameter('runServiceSlug', i) as string;
+						const modelId = this.getNodeParameter('runModelId', i) as string;
+						const inputsCollection = this.getNodeParameter('inputs', i) as {
+							inputValues?: Array<{ key: string; value: string }>;
+						};
+						const options = this.getNodeParameter('runOptions', i) as {
+							temperature?: number;
+							maxTokens?: number;
+						};
+
+						const inputs = parseInputsCollection(inputsCollection);
+
+						const runParams: any = {
+							glyphSlug: serviceSlug,
+							modelId,
+							inputs,
+						};
+
+						if (options.temperature !== undefined) {
+							runParams.temperature = options.temperature;
+						}
+						if (options.maxTokens !== undefined) {
+							runParams.maxTokens = options.maxTokens;
+						}
+
+						const response = await glyphRouterRequest(this, 'POST', ENDPOINTS.RUN, runParams) as RunResult;
+
+						result = {
+							runId: response.runId,
+							status: response.success ? 'completed' : 'failed',
+							output: response.output,
+							error: response.error,
+							cost: response.cost,
+							duration: response.duration || response.latencyMs,
+							serviceSlug,
+							modelId,
+						};
+					} else if (operation === 'runAsync') {
+						const serviceSlug = this.getNodeParameter('runServiceSlug', i) as string;
+						const modelId = this.getNodeParameter('runModelId', i) as string;
+						const inputsCollection = this.getNodeParameter('inputs', i) as {
+							inputValues?: Array<{ key: string; value: string }>;
+						};
+						const waitForCompletion = this.getNodeParameter('waitForCompletion', i) as boolean;
+						const pollingTimeout = this.getNodeParameter('pollingTimeout', i, 180) as number;
+						const options = this.getNodeParameter('runOptions', i) as {
+							temperature?: number;
+							maxTokens?: number;
+						};
+
+						const inputs = parseInputsCollection(inputsCollection);
+
+						const runParams: any = {
+							glyphSlug: serviceSlug,
+							modelId,
+							inputs,
+						};
+
+						if (options.temperature !== undefined) {
+							runParams.temperature = options.temperature;
+						}
+						if (options.maxTokens !== undefined) {
+							runParams.maxTokens = options.maxTokens;
+						}
+
+						const asyncResult = await glyphRouterRequest(
+							this,
+							'POST',
+							ENDPOINTS.RUN_ASYNC,
+							runParams,
+						) as AsyncRunResult;
+
+						if (!asyncResult.accepted || !asyncResult.runId) {
+							throw new Error(asyncResult.error || 'Failed to start async execution');
+						}
+
+						if (!waitForCompletion) {
+							result = {
+								runId: asyncResult.runId,
+								status: 'processing',
+								statusUrl: asyncResult.statusUrl,
+								message: asyncResult.message || 'Execution started',
+								serviceSlug,
+								modelId,
+							};
+						} else {
+							const startTime = Date.now();
+							const timeoutMs = pollingTimeout * 1000;
+
+							while (true) {
+								if (Date.now() - startTime > timeoutMs) {
+									result = {
+										runId: asyncResult.runId,
+										status: 'timeout',
+										error: `Execution did not complete within ${pollingTimeout} seconds`,
+										serviceSlug,
+										modelId,
+									};
+									break;
+								}
+
+								await sleep(DEFAULTS.POLLING_INTERVAL_MS);
+
+								const statusResult = await glyphRouterRequest(
+									this,
+									'GET',
+									`${ENDPOINTS.RUN_STATUS}/${asyncResult.runId}`,
+								) as RunStatusResult;
+
+								if (statusResult.status === 'success' || statusResult.status === 'completed') {
+									result = {
+										runId: asyncResult.runId,
+										status: 'completed',
+										output: statusResult.output,
+										cost: statusResult.cost,
+										duration: statusResult.duration,
+										serviceSlug,
+										modelId,
+									};
+									break;
+								}
+
+								if (statusResult.status === 'failed' || statusResult.status === 'error') {
+									result = {
+										runId: asyncResult.runId,
+										status: 'failed',
+										error: statusResult.error,
+										serviceSlug,
+										modelId,
+									};
+									break;
+								}
+							}
+						}
+					} else if (operation === 'getRunStatus') {
+						const runId = this.getNodeParameter('runId', i) as string;
+
+						const statusResult = await glyphRouterRequest(
+							this,
+							'GET',
+							`${ENDPOINTS.RUN_STATUS}/${runId}`,
+						) as RunStatusResult;
+
+						result = {
+							runId: statusResult.runId,
+							status: statusResult.status,
+							step: statusResult.step,
+							progress: statusResult.progress,
+							message: statusResult.message,
+							output: statusResult.output,
+							partialOutput: statusResult.partialOutput,
+							error: statusResult.error,
+							cost: statusResult.cost,
+							duration: statusResult.duration,
+						};
+					}
+				}
+
+				// ============================================
 				// MODEL OPERATIONS
 				// ============================================
 				else if (resource === 'model') {
@@ -583,7 +861,7 @@ export class XPayDiscover implements INodeType {
 							total: response.total,
 						};
 					} else if (operation === 'estimateCost') {
-						const modelId = this.getNodeParameter('modelId', i) as string;
+						const modelId = this.getNodeParameter('costModelId', i) as string;
 						const inputTokens = this.getNodeParameter('inputTokens', i) as number;
 						const outputTokens = this.getNodeParameter('outputTokens', i) as number;
 
@@ -598,42 +876,6 @@ export class XPayDiscover implements INodeType {
 							modelId,
 							inputTokens,
 							outputTokens,
-						};
-					}
-				}
-
-				// ============================================
-				// COLLECTION OPERATIONS
-				// ============================================
-				else if (resource === 'collection') {
-					if (operation === 'listCollections') {
-						const collectionFilters = this.getNodeParameter('collectionFilters', i) as {
-							featured?: boolean;
-						};
-
-						const query: Record<string, string | number | boolean> = {};
-						if (collectionFilters.featured) query.featured = true;
-
-						const response = await glyphCoreRequest(this, 'GET', ENDPOINTS.COLLECTIONS, undefined, query);
-						result = {
-							collections: response.collections || response || [],
-						};
-					} else if (operation === 'getCollection') {
-						const collectionSlug = this.getNodeParameter('collectionSlug', i) as string;
-						const response = await glyphCoreRequest(
-							this,
-							'GET',
-							`${ENDPOINTS.COLLECTION}/${collectionSlug}`,
-						);
-						// Map glyphs to services in collection response
-						const services = (response.glyphs || []).map((g: any) => ({
-							...g,
-							serviceId: g.id,
-							serviceSlug: g.slug,
-						}));
-						result = {
-							collection: response.collection || response,
-							services,
 						};
 					}
 				}

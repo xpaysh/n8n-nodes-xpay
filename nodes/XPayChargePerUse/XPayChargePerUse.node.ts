@@ -10,20 +10,21 @@ import type {
 } from 'n8n-workflow';
 import * as crypto from 'crypto';
 
-export class XPayTrigger implements INodeType {
+import type { ChargePricingModel } from '../../shared/types';
+
+export class XPayChargePerUse implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'xpay✦ pay-to-run trigger',
-		name: 'xPayTrigger',
+		displayName: 'xpay✦ charge-per-use',
+		name: 'xPayChargePerUse',
 		icon: 'file:xpay.svg',
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["productName"]}}',
-		description: 'Starts the workflow when a customer pays via your hosted beautiful Pay to Run form',
+		description: 'Monetize your workflows with flexible pricing — customers pay per use via a hosted checkout form',
 		defaults: {
-			name: 'xpay✦ pay-to-run trigger',
+			name: 'xpay✦ charge-per-use',
 		},
-		// Show activation message with checkout URL
-		activationMessage: 'xpay✦ is active! Your Pay to Run form URL is ready - check the Output panel.',
+		activationMessage: 'xpay✦ is active! Your checkout form URL is ready — check the Output panel.',
 		inputs: [],
 		outputs: ['main' as NodeConnectionType],
 		credentials: [
@@ -47,17 +48,16 @@ export class XPayTrigger implements INodeType {
 				restartWebhook: true,
 			},
 		],
-		// Custom trigger panel text
 		triggerPanel: {
-			header: 'xpay✦ pay-to-run trigger',
+			header: 'xpay✦ charge-per-use',
 			executionsHelp: {
-				inactive: 'Activate the workflow to generate your Pay to Run form URL. POST an empty body to the webhook URL to get it.',
-				active: 'Workflow is active! POST an empty body to the webhook URL shown above to get your Pay to Run form URL.',
+				inactive: 'Activate the workflow to generate your checkout form URL. POST an empty body to the webhook URL to get it.',
+				active: 'Workflow is active! POST an empty body to the webhook URL shown above to get your checkout form URL.',
 			},
 			activationHint: 'POST an empty body {} to the webhook URL above to get your form URL, then simulate a test payment.',
 		},
 		properties: [
-			// Instructions notice with actual content
+			// Instructions notice
 			{
 				displayName: 'After activating, POST {} to the webhook URL above to get your checkout URL. Manage all settings anytime at app.xpay.sh',
 				name: 'notice',
@@ -99,6 +99,147 @@ export class XPayTrigger implements INodeType {
 				},
 				description: 'Price in USD. Under $1: crypto wallet only. $1+: wallet or card. All payments settle in USDC on-chain.',
 			},
+			{
+				displayName: 'Pricing Model',
+				name: 'pricingModel',
+				type: 'options',
+				options: [
+					{ name: 'Flat Per-Run', value: 'flat', description: 'Fixed price per execution' },
+					{ name: 'Token-Based', value: 'token-based', description: 'Price based on input/output tokens consumed' },
+					{ name: 'Dynamic Pricing', value: 'dynamic', description: 'Price varies by complexity or demand' },
+					{ name: 'Time-Based', value: 'time-based', description: 'Billing per minute/hour of processing' },
+					{ name: 'Per-Unit', value: 'per-unit', description: 'Per document, image, or content unit processed' },
+					{ name: 'Tiered', value: 'tiered', description: 'Volume-based pricing with tier discounts' },
+				],
+				default: 'flat',
+			},
+
+			// Token-based pricing fields
+			{
+				displayName: 'Price Per Input Token ($)',
+				name: 'pricePerInputToken',
+				type: 'number',
+				typeOptions: { minValue: 0, numberPrecision: 6 },
+				default: 0.00003,
+				displayOptions: { show: { pricingModel: ['token-based'] } },
+				description: 'Cost per input token in USD',
+			},
+			{
+				displayName: 'Price Per Output Token ($)',
+				name: 'pricePerOutputToken',
+				type: 'number',
+				typeOptions: { minValue: 0, numberPrecision: 6 },
+				default: 0.00006,
+				displayOptions: { show: { pricingModel: ['token-based'] } },
+				description: 'Cost per output token in USD',
+			},
+			{
+				displayName: 'Estimated Tokens',
+				name: 'estimatedTokens',
+				type: 'number',
+				typeOptions: { minValue: 0 },
+				default: 1000,
+				displayOptions: { show: { pricingModel: ['token-based'] } },
+				description: 'Estimated total tokens for checkout display',
+			},
+
+			// Dynamic pricing fields
+			{
+				displayName: 'Base Price ($)',
+				name: 'basePrice',
+				type: 'number',
+				typeOptions: { minValue: 0.01, numberPrecision: 2 },
+				default: 1.0,
+				displayOptions: { show: { pricingModel: ['dynamic'] } },
+				description: 'Base price before complexity multiplier',
+			},
+			{
+				displayName: 'Complexity Multiplier Min',
+				name: 'complexityMultiplierMin',
+				type: 'number',
+				typeOptions: { minValue: 0.1, numberPrecision: 1 },
+				default: 1.0,
+				displayOptions: { show: { pricingModel: ['dynamic'] } },
+				description: 'Minimum complexity multiplier applied to base price',
+			},
+			{
+				displayName: 'Complexity Multiplier Max',
+				name: 'complexityMultiplierMax',
+				type: 'number',
+				typeOptions: { minValue: 0.1, numberPrecision: 1 },
+				default: 3.0,
+				displayOptions: { show: { pricingModel: ['dynamic'] } },
+				description: 'Maximum complexity multiplier applied to base price',
+			},
+			{
+				displayName: 'Pricing Description',
+				name: 'pricingDescription',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g., Price varies based on input complexity',
+				displayOptions: { show: { pricingModel: ['dynamic'] } },
+				description: 'Explanation shown to customers about how pricing varies',
+			},
+
+			// Time-based pricing fields
+			{
+				displayName: 'Price Per Minute ($)',
+				name: 'pricePerMinute',
+				type: 'number',
+				typeOptions: { minValue: 0.01, numberPrecision: 2 },
+				default: 0.10,
+				displayOptions: { show: { pricingModel: ['time-based'] } },
+				description: 'Cost per minute of processing time',
+			},
+			{
+				displayName: 'Minimum Minutes',
+				name: 'minimumMinutes',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 1,
+				displayOptions: { show: { pricingModel: ['time-based'] } },
+				description: 'Minimum billable minutes per execution',
+			},
+			{
+				displayName: 'Estimated Minutes',
+				name: 'estimatedMinutes',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 5,
+				displayOptions: { show: { pricingModel: ['time-based'] } },
+				description: 'Estimated processing time shown on checkout',
+			},
+
+			// Per-unit pricing fields
+			{
+				displayName: 'Price Per Unit ($)',
+				name: 'pricePerUnit',
+				type: 'number',
+				typeOptions: { minValue: 0.01, numberPrecision: 2 },
+				default: 0.50,
+				displayOptions: { show: { pricingModel: ['per-unit'] } },
+				description: 'Cost per unit processed',
+			},
+			{
+				displayName: 'Unit Label',
+				name: 'unitLabel',
+				type: 'string',
+				default: 'document',
+				placeholder: 'e.g., document, image, second of video',
+				displayOptions: { show: { pricingModel: ['per-unit'] } },
+				description: 'What each unit represents (shown on checkout)',
+			},
+			{
+				displayName: 'Estimated Units',
+				name: 'estimatedUnits',
+				type: 'number',
+				typeOptions: { minValue: 1 },
+				default: 10,
+				displayOptions: { show: { pricingModel: ['per-unit'] } },
+				description: 'Estimated number of units shown on checkout',
+			},
+
+			// Environment
 			{
 				displayName: 'Environment',
 				name: 'environment',
@@ -267,8 +408,6 @@ export class XPayTrigger implements INodeType {
 				const credentials = await this.getCredentials('xPayApi');
 
 				// Auto-fix: Strip internal n8n ports for reverse proxy setups
-				// Common n8n ports: 5678 (default), 5679, etc.
-				// If behind a reverse proxy, external URL shouldn't include internal port
 				if (webhookUrl) {
 					try {
 						const urlObj = new URL(webhookUrl);
@@ -283,7 +422,7 @@ export class XPayTrigger implements INodeType {
 					}
 				}
 
-				// Check for webhook URL override (manual override if auto-fix doesn't work)
+				// Check for webhook URL override
 				const options = this.getNodeParameter('options', {}) as IDataObject;
 				if (options.webhookUrlOverride && typeof options.webhookUrlOverride === 'string' && options.webhookUrlOverride.trim() !== '') {
 					webhookUrl = options.webhookUrlOverride.trim();
@@ -297,18 +436,41 @@ export class XPayTrigger implements INodeType {
 				let recipientWallet = '';
 				if (walletType === 'custom') {
 					recipientWallet = this.getNodeParameter('customWalletAddress', '') as string;
-					// Validate wallet address format for custom wallets
 					if (!recipientWallet || !/^0x[a-fA-F0-9]{40}$/.test(recipientWallet)) {
 						throw new Error('Invalid wallet address. Must be 42 characters starting with 0x (e.g., 0x742d35Cc6634C0532925a3b844Bc9e7595f8fE00)');
 					}
 				}
-				// If walletType is 'default', recipientWallet stays empty and backend uses user's default wallet
+
 				const description = this.getNodeParameter('description', '') as string;
 				const amount = this.getNodeParameter('amount') as number;
+				const pricingModel = this.getNodeParameter('pricingModel', 'flat') as ChargePricingModel;
 				const environment = this.getNodeParameter('environment', 'development') as string;
 				const fieldsData = this.getNodeParameter('fields') as IDataObject;
 				const redirectUrl = this.getNodeParameter('redirectUrl', '') as string;
 				const enableBundles = this.getNodeParameter('enableBundles', false) as boolean;
+
+				// Build pricing config based on model
+				const pricingConfig: Record<string, any> = {};
+				if (pricingModel === 'token-based') {
+					pricingConfig.pricePerInputToken = this.getNodeParameter('pricePerInputToken', 0.00003) as number;
+					pricingConfig.pricePerOutputToken = this.getNodeParameter('pricePerOutputToken', 0.00006) as number;
+					pricingConfig.estimatedTokens = this.getNodeParameter('estimatedTokens', 1000) as number;
+				} else if (pricingModel === 'dynamic') {
+					pricingConfig.basePrice = this.getNodeParameter('basePrice', 1.0) as number;
+					pricingConfig.complexityRange = [
+						this.getNodeParameter('complexityMultiplierMin', 1.0) as number,
+						this.getNodeParameter('complexityMultiplierMax', 3.0) as number,
+					];
+					pricingConfig.pricingDescription = this.getNodeParameter('pricingDescription', '') as string;
+				} else if (pricingModel === 'time-based') {
+					pricingConfig.pricePerMinute = this.getNodeParameter('pricePerMinute', 0.10) as number;
+					pricingConfig.minimumMinutes = this.getNodeParameter('minimumMinutes', 1) as number;
+					pricingConfig.estimatedMinutes = this.getNodeParameter('estimatedMinutes', 5) as number;
+				} else if (pricingModel === 'per-unit') {
+					pricingConfig.pricePerUnit = this.getNodeParameter('pricePerUnit', 0.50) as number;
+					pricingConfig.unitLabel = this.getNodeParameter('unitLabel', 'document') as string;
+					pricingConfig.estimatedUnits = this.getNodeParameter('estimatedUnits', 10) as number;
+				}
 
 				// Derive testMode and network from environment
 				let testMode = true;
@@ -353,7 +515,9 @@ export class XPayTrigger implements INodeType {
 							fields: fields,
 							redirect_url: redirectUrl,
 							test_mode: testMode,
-							bundles_enabled: enableBundles,
+							bundles_enabled: enableBundles || pricingModel === 'tiered',
+							pricing_model: pricingModel,
+							pricing_config: pricingConfig,
 						},
 					},
 					json: true,
@@ -375,21 +539,19 @@ export class XPayTrigger implements INodeType {
 					webhookData.checkoutId = response.checkout_id;
 					webhookData.checkoutUrl = response.checkout_url;
 					webhookData.webhookSecret = response.webhook_secret;
-					webhookData.environment = environment; // Store for delete
+					webhookData.environment = environment;
 
-					// Log the checkout URL for the builder to copy
 					console.log('\n========================================');
-					console.log('xpay✦ Pay to Run Form Generated!');
+					console.log('xpay✦ charge-per-use Checkout Generated!');
 					console.log('========================================');
 					console.log(`Product: ${productName}`);
-					console.log(`Price: $${amount} USDC`);
+					console.log(`Price: $${amount} USDC (${pricingModel})`);
 					console.log(`Form URL: ${response.checkout_url}`);
 					console.log('========================================');
 					console.log('Share this link with your customers to start the workflow.\n');
 
 					return true;
 				} catch (error) {
-					// For now, allow activation even if API fails (for local testing)
 					console.warn('xPay API registration failed:', error);
 					console.warn('Workflow will accept webhooks but checkout URL is not available.');
 
@@ -410,7 +572,6 @@ export class XPayTrigger implements INodeType {
 					return true;
 				}
 
-				// Determine API base URL based on stored environment
 				const apiBaseUrls: Record<string, string> = {
 					development: 'https://cja09z457f.execute-api.us-east-1.amazonaws.com/dev',
 					staging: 'https://hkrqani0b0.execute-api.us-east-1.amazonaws.com/staging',
@@ -425,11 +586,9 @@ export class XPayTrigger implements INodeType {
 						json: true,
 					});
 				} catch (error) {
-					// Ignore errors on deletion
 					console.warn('Failed to delete webhook:', error);
 				}
 
-				// Clear static data
 				delete webhookData.checkoutId;
 				delete webhookData.checkoutUrl;
 				delete webhookData.webhookSecret;
@@ -455,29 +614,29 @@ export class XPayTrigger implements INodeType {
 <!DOCTYPE html>
 <html>
 <head>
-    <title>xpay✦ Pay to Run Form Ready</title>
+    <title>xpay✦ charge-per-use Checkout Ready</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
         .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #10b981; margin-top: 0; }
-        .url-box { background: #f0fdf4; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0; word-break: break-all; }
-        .copy-btn { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        .copy-btn:hover { background: #059669; }
+        h1 { color: #00DC9C; margin-top: 0; }
+        .url-box { background: #f0fdf4; border: 2px solid #00DC9C; border-radius: 8px; padding: 15px; margin: 20px 0; word-break: break-all; }
+        .copy-btn { background: #00DC9C; color: #000; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 10px; font-weight: 700; }
+        .copy-btn:hover { background: #00B07D; }
         .info { color: #666; margin-top: 20px; }
-        .test-btn { display: inline-block; background: #3b82f6; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 10px; }
+        .test-btn { display: inline-block; background: #0F1C4D; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>✅ xpay✦ Pay to Run Form Ready!</h1>
+        <h1>xpay✦ charge-per-use Checkout Ready!</h1>
         <p><strong>Product:</strong> ${productName}</p>
         <p><strong>Price:</strong> $${amount} USDC</p>
 
-        <h3>Your Pay to Run Form URL:</h3>
+        <h3>Your Checkout Form URL:</h3>
         <div class="url-box" id="checkoutUrl">${checkoutUrl || 'URL not available yet'}</div>
-        <button class="copy-btn" onclick="navigator.clipboard.writeText('${checkoutUrl}'); this.textContent='Copied!'">📋 Copy URL</button>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('${checkoutUrl}'); this.textContent='Copied!'">Copy URL</button>
 
-        ${checkoutUrl ? `<p><a href="${checkoutUrl}" target="_blank" class="test-btn">🚀 Open Pay to Run Form</a></p>` : ''}
+        ${checkoutUrl ? `<p><a href="${checkoutUrl}" target="_blank" class="test-btn">Open Checkout Form</a></p>` : ''}
 
         <div class="info">
             <p><strong>Next Steps:</strong></p>
@@ -516,7 +675,7 @@ export class XPayTrigger implements INodeType {
 				webhookResponse: {
 					status: 200,
 					body: {
-						message: 'xpay✦ pay-to-run trigger is listening!',
+						message: 'xpay✦ charge-per-use is listening!',
 						form_url: checkoutUrl,
 						checkout_id: webhookData.checkoutId,
 						test_mode: testMode,
@@ -574,9 +733,10 @@ export class XPayTrigger implements INodeType {
 			}
 		}
 
-		// Extract payment and customer input data
+		// Extract payment, customer input, and pricing data
 		const payment = (body.payment as IDataObject) || {};
 		const customerInput = (body.input as IDataObject) || (body.customer_input as IDataObject) || {};
+		const pricing = (body.pricing as IDataObject) || {};
 
 		// Return data to workflow
 		return {
@@ -593,6 +753,7 @@ export class XPayTrigger implements INodeType {
 								timestamp: payment.timestamp || Date.now(),
 							},
 							input: customerInput,
+							pricing,
 							metadata: {
 								checkoutId: webhookData.checkoutId,
 								receivedAt: new Date().toISOString(),

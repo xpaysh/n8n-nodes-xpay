@@ -1,6 +1,6 @@
 {
   "name": "@xpaysh/n8n-nodes-xpay",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "AI agent marketplace and pay-per-run workflows with xpay✦. Discover services, set spending policies, and execute with automatic payments.",
   "keywords": [
     "n8n-community-node-package",
@@ -33,7 +33,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && npm run copy-icons",
-    "copy-icons": "cp nodes/XPayTrigger/xpay.svg dist/nodes/XPayTrigger/ && cp nodes/XPayDiscover/xpay-discover.svg dist/nodes/XPayDiscover/ && cp nodes/XPayRun/xpay-run.svg dist/nodes/XPayRun/ && cp nodes/XPayPolicy/xpay-policy.svg dist/nodes/XPayPolicy/ && cp nodes/XPayHttp/xpay-http.svg dist/nodes/XPayHttp/",
+    "copy-icons": "cp nodes/XPayChargePerUse/xpay.svg dist/nodes/XPayChargePerUse/ && cp nodes/XPayPayPerUse/xpay-pay-per-use.svg dist/nodes/XPayPayPerUse/ && cp nodes/XPayPolicy/xpay-policy.svg dist/nodes/XPayPolicy/ && cp nodes/XPayHttp/xpay-http.svg dist/nodes/XPayHttp/ && cp nodes/XPayPayPerUseTool/xpay-pay-per-use.svg dist/nodes/XPayPayPerUseTool/",
     "lint": "eslint nodes credentials shared --ext .ts",
     "lint:fix": "eslint nodes credentials shared --ext .ts --fix",
     "prepublishOnly": "npm run build"
@@ -47,12 +47,16 @@
       "dist/credentials/XPayApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/XPayTrigger/XPayTrigger.node.js",
-      "dist/nodes/XPayDiscover/XPayDiscover.node.js",
-      "dist/nodes/XPayRun/XPayRun.node.js",
+      "dist/nodes/XPayChargePerUse/XPayChargePerUse.node.js",
+      "dist/nodes/XPayPayPerUse/XPayPayPerUse.node.js",
       "dist/nodes/XPayPolicy/XPayPolicy.node.js",
-      "dist/nodes/XPayHttp/XPayHttp.node.js"
+      "dist/nodes/XPayHttp/XPayHttp.node.js",
+      "dist/nodes/XPayPayPerUseTool/XPayPayPerUseTool.node.js"
     ]
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -63,6 +67,7 @@
     "typescript": "^5.7.0"
   },
   "peerDependencies": {
-    "n8n-workflow": ">=1.70.0"
+    "n8n-workflow": ">=1.70.0",
+    "@langchain/core": ">=0.3.0"
   }
 }
