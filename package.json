@@ -1,6 +1,6 @@
 {
   "name": "@xpaysh/n8n-nodes-xpay",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "AI agent marketplace and pay-per-run workflows with xpay✦. Discover services, set spending policies, and execute with automatic payments.",
   "keywords": [
     "n8n-community-node-package",
